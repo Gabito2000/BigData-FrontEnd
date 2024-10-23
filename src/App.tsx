@@ -1,22 +1,25 @@
-import CountBtn from '@/components/CountBtn';
 import ReactSVG from '@/assets/react.svg';
-import { Badge } from '@/components/ui/badge';
-
+import {FullScreenServerAdminDashboardComponent} from '@/components/full-screen-server-admin-dashboard';
+import {DataLakeFlowManagerComponent} from '@/components/data-lake-flow-manager';
+import UserPermissions from '@/components/user-permissions';
+import {DataLakeExplorerComponent} from '@/components/data-lake-explorer';
 function App() {
   return (
-    <main className="flex flex-col items-center justify-center h-screen">
-      <div className="flex flex-col items-center gap-y-4">
-        <div className="inline-flex items-center gap-x-4">
-          <img src={ReactSVG} alt="React Logo" className="w-32" />
-          <span className="text-6xl">+</span>
-          <img src={'/vite.svg'} alt="Vite Logo" className="w-32" />
-        </div>
-        <a href="https://ui.shadcn.com" rel="noopener noreferrer nofollow" target="_blank">
-          <Badge variant="outline">shadcn/ui</Badge>
-        </a>
-        <CountBtn />
-      </div>
-    </main>
+    <div>
+    <div>
+      <FullScreenServerAdminDashboardComponent></FullScreenServerAdminDashboardComponent>
+    </div>
+    <div>
+      <DataLakeFlowManagerComponent></DataLakeFlowManagerComponent>
+    </div>
+    <div>
+      <UserPermissions></UserPermissions>
+    </div>
+    <div>
+      <DataLakeExplorerComponent></DataLakeExplorerComponent>
+    </div>
+    </div>
+
   );
 }
 
