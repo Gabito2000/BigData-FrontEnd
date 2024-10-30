@@ -84,6 +84,10 @@ export default {
         normal: "400",
         bold: "700",
       },
+      //add rotate 270 to tailwindcss
+      rotate: {
+        270: "-90deg",
+      },
     },
   },
   plugins: [tailwindAnimate],

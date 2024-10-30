@@ -8,10 +8,12 @@ import {
   Eye,
   GripVertical,
   X,
+  ArrowUp,
+  ArrowDown,
+  ExternalLink,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import autoAnimate from "@formkit/auto-animate";
-
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -28,26 +30,28 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowUp, ArrowDown } from "lucide-react";
-import { CSS } from "@dnd-kit/utilities";
+import { Checkbox } from "@/components/ui/checkbox";
+import autoAnimate from "@formkit/auto-animate";
+import { Separator } from "@radix-ui/react-separator";
 
 type Action = {
   id: string;
-  type: "file" | "command";
+  type: "file" | "command" | "flow";
   name: string;
   details: {
     filePath?: string;
     executionCommand?: string;
     command?: string;
+    flowId?: string;
   };
 };
 
 type Flow = {
   id: string;
   name: string;
-  source: string;
+  sources: Flow[];
+  sourceUrl?: string;
   zone: "Landing" | "Raw" | "Trusted" | "Refined";
-  linkedTo?: string;
   actions: Action[];
 };
 
@@ -77,15 +81,16 @@ function ActionItem({
   return (
     <li
       className="flex items-center justify-between p-2 bg-secondary rounded"
-      key={action.id}
       ref={parentRef}
     >
       <div className="flex items-center space-x-2">
         <span>
           {action.type === "file" ? (
             <File className="h-4 w-4" />
-          ) : (
+          ) : action.type === "command" ? (
             <Terminal className="h-4 w-4" />
+          ) : (
+            <LinkIcon className="h-4 w-4" />
           )}
         </span>
         <div className="flex flex-col">
@@ -93,7 +98,9 @@ function ActionItem({
           <span className="text-sm text-muted-foreground">
             {action.type === "file"
               ? `${action.details.filePath} (${action.details.executionCommand})`
-              : action.details.command}
+              : action.type === "command"
+                ? action.details.command
+                : `Input Flow: ${action.details.flowId}`}
           </span>
         </div>
       </div>
@@ -131,19 +138,22 @@ function ActionItem({
 
 function ActionList({
   actions,
-  setActions,
+  sources,
+  setCurrentFlow,
+  flows,
 }: {
   actions: Action[];
   setActions: (actions: Action[]) => void;
+  setSources: (flow: Flow[]) => void;
+  sources: /**ARRAY OF FLOWS */ Flow[];
+  flows: Flow[];
 }) {
   const [newAction, setNewAction] = useState<Partial<Action>>({
-    type: "file",
+    type: "flow",
     details: {},
   });
-  const [actionsOpen, setActionsOpen] = useState(false);
   const parentRef = useRef<HTMLUListElement>(null);
 
-  // Enable auto-animate for the list
   useEffect(() => {
     if (parentRef.current) {
       autoAnimate(parentRef.current);
@@ -166,7 +176,7 @@ function ActionList({
             executionCommand: newAction.details.executionCommand,
           },
         };
-        setActions([...actions, action]);
+        setCurrentFlow([...actions, action], sources);
         setNewAction({ type: "file", details: {} });
       }
     } else if (newAction.type === "command") {
@@ -179,14 +189,33 @@ function ActionList({
             command: newAction.details.command,
           },
         };
-        setActions([...actions, action]);
+        setCurrentFlow([...actions, action], sources);
         setNewAction({ type: "command", details: {} });
+      }
+    } else if (newAction.type === "flow") {
+      if (newAction.details?.flowId) {
+        const action: Action = {
+          id: `action-${Date.now()}`,
+          type: "flow",
+          name:
+            flows.find((f) => f.id === newAction.details?.flowId)?.name || "",
+          details: {
+            flowId: newAction.details.flowId,
+          },
+        };
+        // add the flow to the sources of the current flow
+        const flow = flows.find((f) => f.id === newAction.details?.flowId);
+        setCurrentFlow([...actions, action], [...sources, flow]);
+        setNewAction({ type: "flow", details: {} });
       }
     }
   };
 
   const handleRemoveAction = (id: string) => {
-    setActions(actions.filter((action) => action.id !== id));
+    setCurrentFlow(
+      actions.filter((action) => action.id !== id),
+      sources
+    );
   };
 
   const handleMoveUp = (id: string) => {
@@ -197,7 +226,7 @@ function ActionList({
         newActions[index],
         newActions[index - 1],
       ];
-      setActions(newActions);
+      setCurrentFlow(newActions, sources);
     }
   };
 
@@ -209,34 +238,34 @@ function ActionList({
         newActions[index + 1],
         newActions[index],
       ];
-      setActions(newActions);
+      setCurrentFlow(newActions, sources);
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex space-x-2">
-        <Button onClick={() => setActionsOpen(!actionsOpen)}>
-          {actionsOpen ? "Close" : "Add Action"}
-        </Button>
+        <Separator orientation="vertical" />
       </div>
-      {actionsOpen && (
-        <div className="space-y-4">
-          <div className="flex space-x-2">
-            <Select
-              value={newAction.type}
-              onValueChange={(value: "file" | "command") =>
-                setNewAction({ ...newAction, type: value, details: {} })
-              }
-            >
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="file">File</SelectItem>
-                <SelectItem value="command">Command</SelectItem>
-              </SelectContent>
-            </Select>
+
+      <div className="space-y-4">
+        <div className="flex space-x-2">
+          <Select
+            value={newAction.type}
+            onValueChange={(value: "flow" | "file" | "command") =>
+              setNewAction({ ...newAction, type: value, details: {} })
+            }
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="flow">Flow</SelectItem>
+              <SelectItem value="file">File</SelectItem>
+              <SelectItem value="command">Command</SelectItem>
+            </SelectContent>
+          </Select>
+          {newAction?.type !== "flow" && (
             <Input
               placeholder="Action name"
               value={newAction.name || ""}
@@ -244,49 +273,70 @@ function ActionList({
                 setNewAction({ ...newAction, name: e.target.value })
               }
             />
-          </div>
+          )}
+        </div>
 
-          {newAction.type === "file" ? (
-            <>
-              <Input
-                placeholder="File path"
-                value={newAction.details?.filePath || ""}
-                onChange={(e) =>
-                  setNewAction({
-                    ...newAction,
-                    details: { ...newAction.details, filePath: e.target.value },
-                  })
-                }
-              />
-              <Input
-                placeholder="Execution command"
-                value={newAction.details?.executionCommand || ""}
-                onChange={(e) =>
-                  setNewAction({
-                    ...newAction,
-                    details: {
-                      ...newAction.details,
-                      executionCommand: e.target.value,
-                    },
-                  })
-                }
-              />
-            </>
-          ) : (
+        {newAction.type === "file" ? (
+          <>
             <Input
-              placeholder="Command"
-              value={newAction.details?.command || ""}
+              placeholder="File path"
+              value={newAction.details?.filePath || ""}
               onChange={(e) =>
                 setNewAction({
                   ...newAction,
-                  details: { ...newAction.details, command: e.target.value },
+                  details: { ...newAction.details, filePath: e.target.value },
                 })
               }
             />
-          )}
-          <Button onClick={handleAddAction}>Add Action</Button>
-        </div>
-      )}
+            <Input
+              placeholder="Execution command"
+              value={newAction.details?.executionCommand || ""}
+              onChange={(e) =>
+                setNewAction({
+                  ...newAction,
+                  details: {
+                    ...newAction.details,
+                    executionCommand: e.target.value,
+                  },
+                })
+              }
+            />
+          </>
+        ) : newAction.type === "command" ? (
+          <Input
+            placeholder="Command"
+            value={newAction.details?.command || ""}
+            onChange={(e) =>
+              setNewAction({
+                ...newAction,
+                details: { ...newAction.details, command: e.target.value },
+              })
+            }
+          />
+        ) : (
+          <Select
+            value={newAction.details?.flowId}
+            onValueChange={(value) =>
+              setNewAction({
+                ...newAction,
+                details: { ...newAction.details, flowId: value },
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select input flow" />
+            </SelectTrigger>
+            <SelectContent>
+              {flows.map((flow) => (
+                <SelectItem key={flow.id} value={flow.id}>
+                  {flow.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        <Button onClick={handleAddAction}>Add Action</Button>
+      </div>
 
       <ul className="space-y-2" ref={parentRef}>
         {actions.map((action, index) => (
@@ -308,7 +358,7 @@ function ActionList({
 function FlowDialog({
   isOpen,
   onOpenChange,
-  flow = { actions: [] },
+  flow = { actions: [], sources: [], name: "", zone: "Landing" },
   onSave,
   flows,
   isEditing,
@@ -320,17 +370,19 @@ function FlowDialog({
   flows: Flow[];
   isEditing?: boolean;
 }) {
-  const [currentFlow, setCurrentFlow] = useState(flow);
+  const [currentFlow, setCurrentFlow] = useState<Partial<Flow>>(flow);
   const zones: Flow["zone"][] = ["Landing", "Raw", "Trusted", "Refined"];
 
   useEffect(() => {
-    setCurrentFlow(flow);
+    setCurrentFlow((prevFlow) => ({ ...prevFlow, ...flow }));
   }, [flow]);
 
   const handleSave = () => {
-    if (currentFlow.name && currentFlow.source && currentFlow.zone) {
+    console.log("current flow", currentFlow);
+    if (currentFlow.name && currentFlow.zone) {
       onSave(currentFlow as Flow);
       onOpenChange(false);
+      console.log(currentFlow);
     }
   };
 
@@ -339,7 +391,7 @@ function FlowDialog({
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            {isEditing ? `Flow Details: ${flow.name}` : "Add New Flow"}
+            {isEditing ? `Edit Flow: ${flow.name}` : "Add New Flow"}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -350,16 +402,6 @@ function FlowDialog({
               value={currentFlow.name || ""}
               onChange={(e) =>
                 setCurrentFlow({ ...currentFlow, name: e.target.value })
-              }
-            />
-          </div>
-          <div>
-            <Label htmlFor="source">Source</Label>
-            <Input
-              id="source"
-              value={currentFlow.source || ""}
-              onChange={(e) =>
-                setCurrentFlow({ ...currentFlow, source: e.target.value })
               }
             />
           </div>
@@ -383,32 +425,27 @@ function FlowDialog({
               </SelectContent>
             </Select>
           </div>
-          <div>
-            <Label htmlFor="linkedTo">Link to Existing Flow</Label>
-
-            <Select
-              value={currentFlow.linkedTo}
-              onValueChange={(value) =>
-                setCurrentFlow({ ...currentFlow, linkedTo: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select flow to link" />
-              </SelectTrigger>
-              <SelectContent>
-                {flows.map((f) => (
-                  <SelectItem key={f.id} value={f.id}>
-                    {f.name} ({f.zone})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {currentFlow.zone === "Landing" ? (
+            <div>
+              <Label htmlFor="sourceUrl">Source URL</Label>
+              <Input
+                id="sourceUrl"
+                value={currentFlow.sourceUrl || ""}
+                onChange={(e) =>
+                  setCurrentFlow({ ...currentFlow, sourceUrl: e.target.value })
+                }
+              />
+            </div>
+          ) : (
+            <div>{/* Add the selection of source flows here */}</div>
+          )}
           <ActionList
-            actions={currentFlow.actions}
-            setActions={(actions) =>
-              setCurrentFlow({ ...currentFlow, actions })
+            actions={currentFlow.actions || []}
+            setCurrentFlow={(actions, sources) =>
+              setCurrentFlow({ ...currentFlow, actions, sources })
             }
+            sources={currentFlow.sources || []}
+            flows={flows}
           />
           <Button onClick={handleSave}>
             {isEditing ? "Save Changes" : "Add Flow"}
@@ -416,54 +453,6 @@ function FlowDialog({
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function SortableActionItem({
-  action,
-  onRemove,
-}: {
-  action: Action;
-  onRemove: (id: string) => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition } =
-    useSortable({ id: action.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <li
-      ref={setNodeRef}
-      style={style}
-      className="flex items-center justify-between p-2 bg-secondary rounded"
-    >
-      <div className="flex items-center space-x-2">
-        <div {...attributes} {...listeners}>
-          <GripVertical className="h-4 w-4 cursor-grab" />
-        </div>
-        <span>
-          {action.type === "file" ? (
-            <File className="h-4 w-4" />
-          ) : (
-            <Terminal className="h-4 w-4" />
-          )}
-        </span>
-        <div className="flex flex-col">
-          <span className="font-medium">{action.name}</span>
-          <span className="text-sm text-muted-foreground">
-            {action.type === "file"
-              ? `${action.details.filePath} (${action.details.executionCommand})`
-              : action.details.command}
-          </span>
-        </div>
-      </div>
-      <Button variant="ghost" size="icon" onClick={() => onRemove(action.id)}>
-        <X className="h-4 w-4" />
-      </Button>
-    </li>
   );
 }
 
@@ -494,6 +483,36 @@ export function DataLakeFlowManagerComponent() {
         return "rgba(144, 238, 144, 0.3)";
       default:
         return "rgba(255, 255, 255, 0.3)";
+    }
+  };
+
+  const handleNavigateToFlow = (flowId: string) => {
+    alert(`Navigating to flow with ID: ${flowId}`);
+  };
+
+  const getSourcesDisplay = (flow: Flow) => {
+    if (flow.zone === "Landing") {
+      return flow.sourceUrl ? (
+        <div className="flex items-center">
+          <Globe className="h-4 w-4 text-blue-500 mr-1" />
+          <span className="text-sm text-muted-foreground">
+            {flow.sourceUrl}
+          </span>
+        </div>
+      ) : null;
+    } else {
+      return flow.sources && flow.sources.length > 0 ? (
+        <div className="flex items-center">
+          <LinkIcon className="h-4 w-4 text-blue-500 mr-1" />
+          <div className="flex flex-col">
+            {flow.sources.map((source) => (
+              <span key={source.id} className="text-sm text-muted-foreground">
+                {source.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      ) : null;
     }
   };
 
@@ -531,9 +550,7 @@ export function DataLakeFlowManagerComponent() {
                   <div className="flex items-center space-x-2">
                     <div className="flex flex-col">
                       <span className="font-medium">{flow.name}</span>
-                      <span className="text-sm text-muted-foreground">
-                        {flow.source}
-                      </span>
+                      {getSourcesDisplay(flow)}
                     </div>
                     <ArrowRight className="h-4 w-4" />
                     <div className="flex flex-col">
@@ -542,12 +559,6 @@ export function DataLakeFlowManagerComponent() {
                         {flow.zone}
                       </span>
                     </div>
-                    {flow.linkedTo && (
-                      <LinkIcon
-                        className="h-4 w-4 text-blue-500"
-                        title={`Linked to ${flows.find((f) => f.id === flow.linkedTo)?.name}`}
-                      />
-                    )}
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className="text-sm text-muted-foreground">
@@ -568,6 +579,13 @@ export function DataLakeFlowManagerComponent() {
                     >
                       <Eye className="h-4 w-4" />
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleNavigateToFlow(flow.id)}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -577,7 +595,7 @@ export function DataLakeFlowManagerComponent() {
       <FlowDialog
         isOpen={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        flow={selectedFlow || { actions: [] }}
+        flow={selectedFlow || { actions: [], sources: [] }}
         onSave={handleSaveFlow}
         flows={flows}
         isEditing={!!selectedFlow}

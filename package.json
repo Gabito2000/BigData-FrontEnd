@@ -15,11 +15,13 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@formkit/auto-animate": "^0.8.2",
     "@radix-ui/react-checkbox": "^1.1.2",
+    "@radix-ui/react-collapsible": "^1.1.1",
     "@radix-ui/react-context-menu": "^2.2.2",
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-scroll-area": "^1.2.0",
     "@radix-ui/react-select": "^2.1.2",
+    "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.1",
     "class-variance-authority": "^0.6.0",
@@ -29,6 +31,7 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0",
     "react-iframe": "^1.8.5",
+    "react-router-dom": "^6.27.0",
     "tailwindcss-animate": "^1.0.6"
   },
   "devDependencies": {

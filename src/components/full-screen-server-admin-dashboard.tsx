@@ -12,7 +12,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ServerSidebar } from "./server-sidebar";
 import { WindowsStyleFileViewer } from "./windows-style-file-viewer";
-import { ServerInfo, initialServersData, FileSystemItem } from "../lib/types";
+import {
+  ServerInfo,
+  initialServersData,
+  FileSystemItem,
+  FileSystemItemHandler,
+} from "../lib/types";
 import { fetchFileSystemData } from "../lib/api";
 
 export function FullScreenServerAdminDashboardComponent() {
@@ -20,12 +25,14 @@ export function FullScreenServerAdminDashboardComponent() {
   const [serversData, setServersData] = useState(initialServersData);
   const [isAddServerDialogOpen, setIsAddServerDialogOpen] = useState(false);
   const [newServerName, setNewServerName] = useState("");
+  const [newServerURL, setNewServerURL] = useState("");
   const [selectedFile, setSelectedFile] = useState<FileSystemItem | null>(null);
 
   const addServer = () => {
     if (newServerName.trim() !== "") {
       const newServer: ServerInfo = {
         name: newServerName,
+        url: newServerURL,
         fileSystem: {
           name: "root",
           type: "folder",
@@ -51,49 +58,14 @@ export function FullScreenServerAdminDashboardComponent() {
 
   const handleFileSystemRequest = async (path: string) => {
     try {
-      const newData = await fetchFileSystemData(path);
       const updatedServersData = [...serversData];
 
-      // If it's the root path, update the root level
-      if (path === "root" || path === "/") {
-        updatedServersData[selectedServer].fileSystem.children =
-          newData.children;
-        setServersData(updatedServersData);
-        return;
-      }
+      const fileSystemHandler = new FileSystemItemHandler(
+        updatedServersData[selectedServer].fileSystem,
+        path
+      );
 
-      // Navigate to the correct folder in the hierarchy
-      const pathParts = path
-        .split("/")
-        .filter((part) => part !== "" && part !== "root");
-      let pathNode = updatedServersData[selectedServer].fileSystem;
-
-      // Navigate through the path to find the target folder
-      for (const folderName of pathParts) {
-        if (!pathNode.children) {
-          pathNode.children = [];
-        }
-
-        let nextNode = pathNode.children.find(
-          (child) => child.name === folderName
-        );
-
-        if (!nextNode) {
-          // Create new folder if it doesn't exist
-          nextNode = {
-            name: folderName,
-            type: "folder",
-            modifiedDate: new Date(),
-            children: [],
-          };
-          pathNode.children.push(nextNode);
-        }
-
-        pathNode = nextNode;
-      }
-
-      // Replace the contents of the target folder with the new data
-      pathNode.children = newData.children;
+      await fileSystemHandler.update(path);
 
       setServersData(updatedServersData);
     } catch (error) {
@@ -113,7 +85,7 @@ export function FullScreenServerAdminDashboardComponent() {
     <div className="h-screen flex flex-col">
       <div className="bg-gray-100 p-4 border-b flex justify-between items-center">
         <h2 className="text-lg font-semibold">
-          Panel de Control de Servidores
+          Server Administration Dashboard
         </h2>
         <Dialog
           open={isAddServerDialogOpen}
@@ -122,17 +94,17 @@ export function FullScreenServerAdminDashboardComponent() {
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <Plus className="w-4 h-4 mr-2" />
-              Agregar Servidor
+              Add Server
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Agregar Nuevo Servidor</DialogTitle>
+              <DialogTitle>Add a New Server</DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="name" className="text-right">
-                  Nombre
+                  Name
                 </Label>
                 <Input
                   id="name"
@@ -141,9 +113,20 @@ export function FullScreenServerAdminDashboardComponent() {
                   className="col-span-3"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  URL
+                </Label>
+                <Input
+                  id="name"
+                  value={newServerName}
+                  onChange={(e) => setNewServerURL(e.target.value)}
+                  className="col-span-3"
+                />
+              </div>
             </div>
             <div className="flex justify-end">
-              <Button onClick={addServer}>Agregar</Button>
+              <Button onClick={addServer}>Add</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -167,7 +150,7 @@ export function FullScreenServerAdminDashboardComponent() {
       <div className="flex-grow flex overflow-hidden">
         <ServerSidebar serverInfo={serversData[selectedServer]} />
         <div className="w-2/3 p-4 overflow-hidden flex flex-col">
-          <h3 className="text-lg font-semibold mb-2">Sistema de Archivos</h3>
+          <h3 className="text-lg font-semibold mb-2">File Sistem</h3>
 
           <div
             className="flex-grow flex flex-col"
@@ -181,26 +164,24 @@ export function FullScreenServerAdminDashboardComponent() {
                 onClick={handleBackToFileSystem}
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
-                Atrás
+                Back
               </Button>
               <h3 className="text-md font-semibold mb-2">
                 {selectedFile?.name}
               </h3>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <h4 className="text-sm font-semibold">Tipo</h4>
+                  <h4 className="text-sm font-semibold">Type</h4>
                   <p>
                     {selectedFile?.type === "folder" ? "Carpeta" : "Archivo"}
                   </p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">Tamaño</h4>
+                  <h4 className="text-sm font-semibold">Size</h4>
                   <p>{selectedFile?.size} bytes</p>
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold">
-                    Fecha de Modificación
-                  </h4>
+                  <h4 className="text-sm font-semibold">Modified Date</h4>
                   <p>{selectedFile?.modifiedDate.toLocaleString()}</p>
                 </div>
               </div>

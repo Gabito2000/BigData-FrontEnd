@@ -1,10 +1,77 @@
+import { fetchFileSystemData } from './api';
+
 export type FileSystemItem = {
-  name: string
-  type: 'file' | 'folder'
-  size?: number
-  modifiedDate: Date
-  children?: FileSystemItem[]
+  name: string;
+  type: 'file' | 'folder';
+  size?: number;
+  modifiedDate: Date;
+  children?: FileSystemItem[];
+};
+
+
+export class FileSystemItemHandler {
+  data: FileSystemItem;
+  path: string;
+
+  constructor(data: FileSystemItem, path: string) {
+    this.data = data;
+    this.path = path;
+  }
+
+  public async update(path: string) {
+
+    console.log(`Updating file system data for path: ${path}`);
+    this.path = path;
+    const newData = await fetchFileSystemData(path);
+
+    // If it's the root path, update the root level
+    if (path === "root" || path === "/") {
+      this.data.children =
+        newData.children;
+      return this.data;
+    }
+
+    // Navigate to the correct folder in the hierarchy
+    const pathParts = path
+      .split("/")
+      .filter((part) => part !== "" && part !== "root");
+    let pathNode = this.data;
+
+    // Navigate through the path to find the target folder
+    for (const folderName of pathParts) {
+      if (!pathNode.children) {
+        pathNode.children = [];
+      }
+
+      let nextNode = pathNode.children.find(
+        (child) => child.name === folderName
+      );
+
+      if (!nextNode) {
+        // Create new folder if it doesn't exist
+        nextNode = {
+          name: folderName,
+          type: "folder",
+          modifiedDate: new Date(),
+          children: [],
+        };
+        pathNode.children.push(nextNode);
+      }
+
+      pathNode = nextNode;
+    }
+
+    // Replace the contents of the target folder with the new data
+    pathNode.children = newData.children;
+
+    return this.data;
+  }
 }
+
+
+
+
+
 
 export type Process = {
   id: number
@@ -21,6 +88,7 @@ export type Zone = {
 
 export type ServerInfo = {
   name: string
+  url: string
   fileSystem: FileSystemItem
   storage: {
     total: number
@@ -31,11 +99,13 @@ export type ServerInfo = {
 }
 
 
-import { fetchFileSystemData } from './api'
+
+
 export const initialServersData: ServerInfo[] = [
   {
     name: "Servidor 1",
     fileSystem: await fetchFileSystemData('root'),
+    url: "http://localhost:3001",
     storage: {
       total: 1000,
       used: 400
