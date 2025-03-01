@@ -18,6 +18,7 @@ import {
   Key,
   HardDrive,
   Terminal,
+  Component,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -35,13 +36,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import { DataLakeFlowManagerComponent } from "@/components/data-lake-flow-manager";
+import DataLakeFlowManagerComponent from "@/components/data-lake-flow-manager";
 import { DataLakeExplorerComponent } from "@/components/data-lake-explorer";
 import { DataLakeCuadernos } from "@/components/data-lake-cuadernos";
 import UserPermissions from "@/components/user-permissions";
 import { FullScreenServerAdminDashboardComponent } from "@/components/full-screen-server-admin-dashboard";
 import { WindowsStyleFileViewer } from "@/components/windows-style-file-viewer";
 import { FileSystemItemHandler } from "@/lib/types";
+// import WasmTerminalComponent from "@/components/wasm-terminal-component";
 
 export type FileSystemItem = {
   name: string;
@@ -101,6 +103,7 @@ const menuItems = [
     icon: Terminal,
     label: "Consola",
     path: "/consola",
+    // Component: WasmTerminalComponent,
   },
 ];
 
