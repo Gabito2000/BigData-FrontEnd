@@ -77,8 +77,8 @@ const menuItems = [
   },
   {
     icon: List,
-    label: "Vista de procesos",
-    path: "/procesos",
+    label: "Vista de processs",
+    path: "/processs",
     component: DataLakeExplorerComponent,
   },
   {
