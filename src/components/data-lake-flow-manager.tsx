@@ -7,243 +7,165 @@ import {
   Globe,
   Link as LinkIcon,
   Search,
+  Tag as TagIcon,
+  X,
 } from "lucide-react";
+import { fetchFlows, fetchTags, fetchElementsByTag, Flow, Process, ProcessItem, Dataset, Worker } from "@/lib/api";
 
-type Port = {
-  id: string;
-  name: string;
-  zone: "Landing" | "Raw" | "Trusted" | "Refined";
-  process: {
-    input: PortItem[];
-    output: PortItem[];
+// Extended types with icon property
+type DatasetWithIcon = Dataset & { icon: React.ReactNode };
+type WorkerWithIcon = Worker & { icon: React.ReactNode };
+type ProcessItemWithIcon = DatasetWithIcon | WorkerWithIcon;
+
+// Extended flow types
+type ProcessWithIcons = Omit<Process, 'worker'> & {
+  worker: {
+    input: ProcessItemWithIcon[];
+    output: ProcessItemWithIcon[];
   };
 };
 
-type PortItem = Dataset | Process;
-
-type Dataset = {
-  id: string;
-  name: string;
-  sourceUrl: string;
-  icon: React.ReactNode;
-};
-
-type Process = {
-  id: string;
-  name: string;
-  icon: React.ReactNode;
-};
-
-type Flow = {
-  id: string;
-  name: string;
-  ports: Port[];
+type FlowWithIcons = Omit<Flow, 'processes'> & {
+  processes: ProcessWithIcons[];
 };
 
 export default function DataLakeFlowManager() {
-  const [flows, setFlows] = useState<Flow[]>([
-    {
-      id: "flow1",
-      name: "Customer Data Pipeline",
-      ports: [
-        {
-          id: "port1",
-          name: "Customer Import",
-          zone: "Landing",
-          process: {
-            input: [
-              {
-                id: "dataset1",
-                name: "Customer Data",
-                sourceUrl: "https://api.example.com/customers",
-                icon: <Database />,
-              },
-              //process
-              {
-                id: "process5",
-                name: "Data Normalization",
-                icon: <Code />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset2",
-                name: "Raw Customers",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port2",
-          name: "Customer Cleaning",
-          zone: "Raw",
-          process: {
-            input: [
-              {
-                id: "dataset2",
-                name: "Raw Customers",
-                icon: <Database />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset3",
-                name: "Trusted Customers",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port3",
-          name: "Customer Aggregation",
-          zone: "Trusted",
-          process: {
-            input: [
-              {
-                id: "dataset3",
-                name: "Trusted Customers",
-                icon: <Database />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset4",
-                name: "Refined Customers",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port4",
-          name: "Customer Summary",
-          zone: "Refined",
-          process: {
-            input: [
-              {
-                id: "dataset4",
-                name: "Refined Customers",
-                icon: <Database />,
-              },
-            ],
-            output: [],
-          },
-        },
-      ],
-    },
-    {
-      id: "flow2",
-      name: "Sales Data Pipeline",
-      ports: [
-        {
-          id: "port5",
-          name: "Sales Import",
-          zone: "Landing",
-          process: {
-            input: [
-              {
-                id: "dataset5",
-                name: "Sales Data",
-                sourceUrl: "https://api.example.com/sales",
-                icon: <Database />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset6",
-                name: "Raw Sales",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port6",
-          name: "Sales Cleaning",
-          zone: "Raw",
-          process: {
-            input: [
-              {
-                id: "dataset6",
-                name: "Raw Sales",
-                icon: <Database />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset7",
-                name: "Trusted Sales",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port7",
-          name: "Sales Aggregation",
-          zone: "Trusted",
-          process: {
-            input: [
-              {
-                id: "dataset7",
-                name: "Trusted Sales",
-                icon: <Database />,
-              },
-            ],
-            output: [
-              {
-                id: "dataset8",
-                name: "Refined Sales",
-                icon: <Database />,
-              },
-            ],
-          },
-        },
-        {
-          id: "port8",
-          name: "Sales Summary",
-          zone: "Refined",
-          process: {
-            input: [
-              {
-                id: "dataset8",
-                name: "Refined Sales",
-                icon: <Database />,
-              },
-            ],
-            output: [],
-          },
-        },
-      ],
-    },
-  ]);
-
+  const [flows, setFlows] = useState<FlowWithIcons[]>([]);
+  const [tags, setTags] = useState<{ id: string; count?: number }[]>([]);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterText, setFilterText] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch flows and tags on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const [flowsData, tagsData] = await Promise.all([
+          fetchFlows(),
+          fetchTags()
+        ]);
+        
+        // Add icons to the datasets and workers
+        const flowsWithIcons = flowsData.map(flow => ({
+          ...flow,
+          processes: flow.processes.map(process => ({
+            ...process,
+            worker: {
+              input: process.worker.input.map(item => ({
+                ...item,
+                icon: 'sourceUrl' in item ? <Database /> : <Code />
+              })),
+              output: process.worker.output.map(item => ({
+                ...item,
+                icon: <Database />
+              }))
+            }
+          }))
+        }));
+        
+        setFlows(flowsWithIcons);
+        setTags(tagsData);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An unknown error occurred');
+        console.error('Error loading data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // Fetch elements by tag when a tag is selected
+  useEffect(() => {
+    if (selectedTag) {
+      const loadTaggedElements = async () => {
+        setIsLoading(true);
+        try {
+          const elements = await fetchElementsByTag(selectedTag);
+          
+          // If there are flows in the tagged elements, filter the flows
+          if (elements.flows.length > 0) {
+            const flowIds = new Set(elements.flows.map(flow => flow.id));
+            setFlows(prevFlows => 
+              prevFlows.filter(flow => flowIds.has(flow.id))
+            );
+          }
+          
+          // If there are processes in the tagged elements, filter the processes
+          if (elements.processes.length > 0) {
+            const processIds = new Set(elements.processes.map(process => process.id));
+            setFlows(prevFlows => 
+              prevFlows.map(flow => ({
+                ...flow,
+                processes: flow.processes.filter(process => processIds.has(process.id))
+              })).filter(flow => flow.processes.length > 0)
+            );
+          }
+          
+        } catch (err) {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred');
+          console.error('Error loading tagged elements:', err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      loadTaggedElements();
+    } else {
+      // If no tag is selected, reload all flows
+      fetchFlows()
+        .then(flowsData => {
+          // Add icons to the datasets and workers
+          const flowsWithIcons = flowsData.map(flow => ({
+            ...flow,
+            processes: flow.processes.map(process => ({
+              ...process,
+              worker: {
+                input: process.worker.input.map(item => ({
+                  ...item,
+                  icon: 'sourceUrl' in item ? <Database /> : <Code />
+                })),
+                output: process.worker.output.map(item => ({
+                  ...item,
+                  icon: <Database />
+                }))
+              }
+            }))
+          }));
+          
+          setFlows(flowsWithIcons);
+        })
+        .catch(err => {
+          setError(err instanceof Error ? err.message : 'An unknown error occurred');
+          console.error('Error reloading flows:', err);
+        });
+    }
+  }, [selectedTag]);
 
   useEffect(() => {
     validateFlows();
   }, [flows]);
 
-  // Ensure "Landing" elements have a sourceUrl and others do not.
   const validateFlows = () => {
     flows.forEach((flow) => {
-      flow.ports.forEach((port) => {
-        if (port.zone === "Landing") {
-          port.process.input.forEach((item) => {
-            if (!item.sourceUrl) {
+      flow.processes.forEach((process) => {
+        if (process.zone === "Landing") {
+          process.worker.input.forEach((item) => {
+            if ('sourceUrl' in item && !item.sourceUrl) {
               console.warn(
                 `Landing zone item "${item.name}" is missing a required sourceUrl.`
               );
             }
           });
         } else {
-          port.process.input.forEach((item) => {
-            if (item.sourceUrl) {
+          process.worker.input.forEach((item) => {
+            if ('sourceUrl' in item && item.sourceUrl) {
               console.warn(
-                `"${port.zone}" zone item "${item.name}" should not have a sourceUrl.`
+                `"${process.zone}" zone item "${item.name}" should not have a sourceUrl.`
               );
             }
           });
@@ -252,7 +174,7 @@ export default function DataLakeFlowManager() {
     });
   };
 
-  const getZoneColor = (zone: Port["zone"]) => {
+  const getZoneColor = (zone: Process["zone"]) => {
     switch (zone) {
       case "Landing":
         return "rgba(173, 216, 230, 0.3)";
@@ -267,11 +189,11 @@ export default function DataLakeFlowManager() {
     }
   };
 
-  const getSourcesDisplay = (port: Port) => {
-    const landingInput = port.process.input.find(
-      (item) => port.zone === "Landing" && item.sourceUrl
+  const getSourcesDisplay = (process: Process) => {
+    const landingInput = process.worker.input.find(
+      (item) => process.zone === "Landing" && 'sourceUrl' in item && item.sourceUrl
     );
-    return landingInput ? (
+    return landingInput && 'sourceUrl' in landingInput ? (
       <div className="flex items-center">
         <Globe className="h-4 w-4 text-blue-500 mr-1" />
         <span className="text-sm text-muted-foreground">
@@ -281,62 +203,51 @@ export default function DataLakeFlowManager() {
     ) : null;
   };
 
-  const filterFlows = (flows, filterText) => {
+  const filterFlows = (flows: Flow[], filterText: string) => {
+    if (!filterText) return flows;
+    
     return flows
       .map((flow) => {
-        const filteredPorts = flow.ports
-          .filter((port) => {
-            const filteredInputItems = port.process.input.filter((item) => {
-              if (item.name.toLowerCase().includes(filterText.toLowerCase())) {
-                return true;
-              }
-              return false;
-            });
-            const filteredOutputItems = port.process.output.filter((item) => {
-              if (item.name.toLowerCase().includes(filterText.toLowerCase())) {
-                return true;
-              }
-              return false;
-            });
+        const filteredProcesses = flow.processes
+          .filter((process) => {
+            const filteredInputItems = process.worker.input.filter((item) =>
+              item.name.toLowerCase().includes(filterText.toLowerCase())
+            );
+            const filteredOutputItems = process.worker.output.filter((item) =>
+              item.name.toLowerCase().includes(filterText.toLowerCase())
+            );
 
-            if (
-              filteredInputItems.length > 0 ||
-              filteredOutputItems.length > 0
-            ) {
+            if (filteredInputItems.length > 0 || filteredOutputItems.length > 0) {
               return {
-                ...port,
-                process: {
+                ...process,
+                worker: {
                   input: filteredInputItems,
                   output: filteredOutputItems,
                 },
               };
             }
 
-            if (port.name.toLowerCase().includes(filterText.toLowerCase())) {
-              return port;
-            }
-
-            return null;
+            return process.name.toLowerCase().includes(filterText.toLowerCase())
+              ? process
+              : null;
           })
-          .filter((port) => port !== null);
+          .filter((process): process is Process => process !== null);
 
-        if (filteredPorts.length > 0) {
+        if (filteredProcesses.length > 0) {
           return {
             ...flow,
-            ports: filteredPorts,
+            processes: filteredProcesses,
           };
         }
 
-        if (flow.name.toLowerCase().includes(filterText.toLowerCase())) {
-          return flow;
-        }
-
-        return null;
+        return flow.name.toLowerCase().includes(filterText.toLowerCase())
+          ? flow
+          : null;
       })
-      .filter((flow) => flow !== null);
+      .filter((flow): flow is Flow => flow !== null);
   };
 
-  // Use the filter function in your component
+  
   const filteredFlows = useMemo(
     () => filterFlows(flows, filterText),
     [flows, filterText]
@@ -346,18 +257,66 @@ export default function DataLakeFlowManager() {
     setFilterText(flow.name);
   };
 
-  const handleFilterByPort = (port: Port) => {
-    setFilterText(port.name);
+  const handleFilterByProcess = (process: Process) => {
+    setFilterText(process.name);
   };
 
-  const handleFilterByItem = (item: PortItem) => {
+  const handleFilterByItem = (item: ProcessItem) => {
     setFilterText(item.name);
+  };
+
+  const handleTagSelect = (tagId: string) => {
+    if (selectedTag === tagId) {
+      // If clicking the same tag, deselect it
+      setSelectedTag(null);
+    } else {
+      // Select the new tag
+      setSelectedTag(tagId);
+    }
+    // Clear text filter when changing tags
+    setFilterText("");
+  };
+
+  const clearFilters = () => {
+    setSelectedTag(null);
+    setFilterText("");
   };
 
   return (
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-bold">Data Lake Flow Manager</h1>
+      
+      {/* Tags filter section */}
       <div className="mb-4">
+        <h2 className="text-lg font-semibold mb-2">Filter by Tags</h2>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {tags.map(tag => (
+            <Button
+              key={tag.id}
+              variant={selectedTag === tag.id ? "default" : "outline"}
+              size="sm"
+              onClick={() => handleTagSelect(tag.id)}
+              className="flex items-center gap-1"
+            >
+              <TagIcon className="h-3 w-3" />
+              {tag.id}
+              {tag.count && <span className="text-xs ml-1">({tag.count})</span>}
+            </Button>
+          ))}
+          {(selectedTag || filterText) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={clearFilters}
+              className="flex items-center gap-1 bg-red-50 hover:bg-red-100 text-red-600"
+            >
+              <X className="h-3 w-3" />
+              Clear Filters
+            </Button>
+          )}
+        </div>
+        
+        {/* Text filter */}
         <input
           type="text"
           className="border rounded px-3 py-2 w-full"
@@ -366,94 +325,113 @@ export default function DataLakeFlowManager() {
           onChange={(e) => setFilterText(e.target.value)}
         />
       </div>
-      {["Landing", "Raw", "Trusted", "Refined"].map((zone) => (
-        <div
-          key={zone}
-          className="border rounded-lg p-4"
-          style={{ backgroundColor: getZoneColor(zone as Port["zone"]) }}
-        >
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">{zone}</h2>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            {filteredFlows.map(
-              (flow) =>
-                flow.ports.some((port) => port.zone === zone) && (
-                  <div key={flow.id}>
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-medium">{flow.name}</h3>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleFilterByFlow(flow)}
-                      >
-                        <Search className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    {flow.ports
-                      .filter((port) => port.zone === zone)
-                      .map((port) => (
-                        <div key={port.id} className="border rounded-lg p-4">
-                          <div className="flex justify-between items-center">
-                            <h4 className="font-medium">{port.name}</h4>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => handleFilterByPort(port)}
-                            >
-                              <Search className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          {getSourcesDisplay(port)}
-                          <div className="flex space-x-2">
-                            {port.process.input.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {item.icon}
-                                <span className="text-sm">{item.name}</span>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleFilterByItem(item)}
-                                >
-                                  <Search className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                            {port.process.output.map((item) => (
-                              <div
-                                key={item.id}
-                                className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded"
-                              >
-                                {item.icon}
-                                <span className="text-sm">{item.name}</span>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  onClick={() => handleFilterByItem(item)}
-                                >
-                                  <Search className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )
-            )}
-          </div>
+      
+      {/* Show message when no flows match filters */}
+      {filteredFlows.length === 0 && (
+        <div className="border rounded-lg p-8 text-center bg-gray-50">
+          <p className="text-gray-500 mb-4">No flows match the current filters</p>
+          <Button onClick={clearFilters}>Clear Filters</Button>
         </div>
-      ))}
+      )}
+      
+      {/* Zones and flows display */}
+      {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
+        // Only show zones that have processes after filtering
+        const hasProcessesInZone = filteredFlows.some(flow => 
+          flow.processes.some(process => process.zone === zone)
+        );
+        
+        if (!hasProcessesInZone) return null;
+        
+        return (
+          <div
+            key={zone}
+            className="border rounded-lg p-4"
+            style={{ backgroundColor: getZoneColor(zone as Process["zone"]) }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{zone}</h2>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsDialogOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {filteredFlows.map(
+                (flow) =>
+                  flow.processes.some((process) => process.zone === zone) && (
+                    <div key={flow.id}>
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium">{flow.name}</h3>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => handleFilterByFlow(flow)}
+                        >
+                          <Search className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {flow.processes
+                        .filter((process) => process.zone === zone)
+                        .map((process) => (
+                          <div key={process.id} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-center">
+                              <h4 className="font-medium">{process.name}</h4>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleFilterByProcess(process)}
+                              >
+                                <Search className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            {getSourcesDisplay(process)}
+                            <div className="flex space-x-2">
+                              {process.worker.input.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded"
+                                >
+                                  {(item as ProcessItemWithIcon).icon}
+                                  <span className="text-sm">{item.name}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleFilterByItem(item)}
+                                  >
+                                    <Search className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                              {process.worker.output.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="flex items-center space-x-1 bg-gray-100 px-2 py-1 rounded"
+                                >
+                                  {(item as ProcessItemWithIcon).icon}
+                                  <span className="text-sm">{item.name}</span>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={() => handleFilterByItem(item)}
+                                  >
+                                    <Search className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

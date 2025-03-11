@@ -14,7 +14,7 @@ export const ProcessList: React.FC<{ processes: Process[] }> = ({
 }) => {
   return (
     <div className="mb-4">
-      <h3 className="text-lg font-semibold mb-2">Procesos</h3>
+      <h3 className="text-lg font-semibold mb-2">Processs</h3>
       <Table>
         <TableHeader>
           <TableRow>
