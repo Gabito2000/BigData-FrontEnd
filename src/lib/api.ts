@@ -20,11 +20,14 @@ export type Dataset = {
   id: string;
   name: string;
   sourceUrl?: string;
+  type: 'dataset';
+  is_input: boolean; // Add this field to track input/output status
 };
 
 export type Worker = {
   id: string;
   name: string;
+  type: 'worker'; // Added type property to identify workers
 };
 
 export type Flow = {
@@ -70,114 +73,38 @@ export const fetchFlows = async (): Promise<Flow[]> => {
     if (!response.ok) {
       throw new Error(`Failed to fetch flows: ${response.statusText}`);
     }
-    return await response.json();
+    const flows = await response.json();
+    
+    // Ensure each item in input and output has the correct type property
+    return flows.map((flow: Flow) => ({
+      ...flow,
+      processes: flow.processes.map((process: Process) => ({
+        ...process,
+        worker: {
+          input: process.worker.input.map((item: ProcessItem) => {
+            // If the item already has a type property, use it
+            if (item.type === 'dataset' || item.type === 'worker') {
+              return item;
+            }
+            return {
+              ...item,
+              type: item.sourceUrl !== undefined ? 'dataset' : 'worker'
+            };
+          }),
+          output: process.worker.output.map((item: ProcessItem) => ({
+            ...item,
+            // Outputs are typically datasets
+            type: 'dataset'
+          }))
+        }
+      }))
+    }));
   } catch (error) {
     console.error('Error fetching flows:', error);
     throw error;
   }
 }
 
-// Create a new flow
-export const createFlow = async (flowData: { id: string; name: string }): Promise<Flow> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/flows`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(flowData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create flow: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating flow:', error);
-    throw error;
-  }
-}
-
-// Create a new process
-export const createProcess = async (processData: {
-  id: string;
-  name: string;
-  flow_id: string;
-  zone: string;
-}): Promise<Process> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/processes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(processData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create process: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating process:', error);
-    throw error;
-  }
-}
-
-// Create a new dataset
-export const createDataset = async (datasetData: {
-  id: string;
-  name: string;
-  process_id: string;
-  sourceUrl?: string;
-}): Promise<Dataset> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/datasets`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(datasetData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create dataset: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating dataset:', error);
-    throw error;
-  }
-}
-
-// Create a new worker
-export const createWorker = async (workerData: {
-  id: string;
-  name: string;
-  process_id: string;
-}): Promise<Worker> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/workers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(workerData),
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Failed to create worker: ${response.statusText}`);
-    }
-    
-    return await response.json();
-  } catch (error) {
-    console.error('Error creating worker:', error);
-    throw error;
-  }
-}
 
 // Add these types for tag management
 export type Tag = {
@@ -222,3 +149,155 @@ export const fetchElementsByTag = async (tagId: string): Promise<TaggedElements>
     throw error;
   }
 };
+
+// Add this to your existing API file
+
+export interface File {
+  id: string;
+  name?: string;
+  fileType?: string;
+  filePath?: string;
+  dataset_id?: string;  // Add this to match backend
+}
+
+export async function fetchFilesByDataset(datasetId: string): Promise<File[]> {
+  try {
+    // Update the API endpoint to include the base URL
+    const response = await fetch(`${API_BASE_URL}/api/datasets/${datasetId}/files`);
+    if (!response.ok) {
+      throw new Error(`Error fetching files: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching files:', error);
+    return [];
+  }
+}
+
+export async function fetchAllFiles(): Promise<File[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/files`);
+    if (!response.ok) {
+      throw new Error(`Error fetching files: ${response.statusText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching all files:', error);
+    return [];
+  }
+}
+
+export interface FlowCreateData {
+  id: string;
+  name: string;
+  description?: string;
+}
+
+export async function createFlow(flowData: FlowCreateData) {
+  const response = await fetch(`${API_BASE_URL}/api/flows`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(flowData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to create flow');
+  }
+
+  return response.json();
+}
+
+export async function createProcess(processData: { id: string; name: string; flow_id: string; zone: string }) {
+  const response = await fetch(`${API_BASE_URL}/api/processes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(processData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create process');
+  }
+  return response.json();
+}
+
+export async function createWorker(workerData: { id: string; name: string; process_id: string }) {
+  const response = await fetch(`${API_BASE_URL}/api/workers`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(workerData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create worker');
+  }
+  return response.json();
+}
+
+export async function createDataset(datasetData: { 
+  id: string; 
+  name: string; 
+  process_id: string; 
+  sourceUrl?: string;
+  is_input: boolean;
+}) {
+  const response = await fetch(`${API_BASE_URL}/api/datasets`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(datasetData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create dataset');
+  }
+  return response.json();
+}
+
+export async function createTransformation(transformationData: { id: string; name: string; worker_id: string; file_id: string[] }) {
+  const response = await fetch(`${API_BASE_URL}/api/transformations`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(transformationData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create transformation');
+  }
+  return response.json();
+}
+
+export async function createFile(fileData: { id: string; name: string; dataset_id: string; fileType: string; file_path?: string }) {
+  // Update the API endpoint to include the base URL
+  const response = await fetch(`${API_BASE_URL}/api/files`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(fileData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create file');
+  }
+  return response.json();
+}
+
+// Add this function to your existing API functions
+export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
+  try {
+    // Fixed endpoint to use plural 'transformations' instead of singular
+    const response = await fetch(`${API_BASE_URL}/api/workers/${workerId}/transformations`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch transformations for worker ${workerId}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching worker transformations:', error);
+    return [];
+  }
+}
