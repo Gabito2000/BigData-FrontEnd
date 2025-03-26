@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, File as FileIcon, Search } from "lucide-react";
+import { Button } from "./ui/button";
+import { Search, ChevronDown, ChevronRight, FileIcon, Plus } from "lucide-react";
+import { FileCreationDialog } from "./file-creation-dialog";
 import { Dataset, File } from "@/lib/api";
 
 type DatasetWithIcon = Dataset & {
@@ -14,9 +15,17 @@ interface DatasetItemProps {
   isLoading: boolean;
   onToggleFiles: (datasetId: string) => void;
   onSearch: (text: string) => void;
+  reloadDatasetFiles: (datasetId: string) => void; // Add this prop
 }
 
-export function DatasetItem({ dataset, isLoading, onToggleFiles, onSearch }: DatasetItemProps) {
+export function DatasetItem({ 
+  dataset, 
+  isLoading, 
+  onToggleFiles, 
+  onSearch,
+  reloadDatasetFiles // Destructure the new prop
+}: DatasetItemProps) {
+  const [showFileDialog, setShowFileDialog] = useState(false);
   const SearchButton = ({ 
     text, 
     size = "icon", 
@@ -62,13 +71,23 @@ export function DatasetItem({ dataset, isLoading, onToggleFiles, onSearch }: Dat
         </Button>
         <div className="flex-shrink-0">{dataset.icon}</div>
         <span className="text-sm truncate">{dataset.name}</span>
-        <SearchButton 
-          text={dataset.name}
-          size="icon"
-          iconSize="h-3 w-3"
-          className="h-4 w-4 p-0 ml-auto"
-          onClick={() => onSearch(dataset.name)}
-        />
+        <div className="ml-auto flex items-center space-x-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-4 w-4 p-0"
+            onClick={() => setShowFileDialog(true)}
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+          <SearchButton 
+            text={dataset.name}
+            size="icon"
+            iconSize="h-3 w-3"
+            className="h-4 w-4 p-0"
+            onClick={() => onSearch(dataset.name)}
+          />
+        </div>
       </div>
       
       {dataset.showFiles && (
@@ -96,6 +115,17 @@ export function DatasetItem({ dataset, isLoading, onToggleFiles, onSearch }: Dat
           )}
         </div>
       )}
+
+      <FileCreationDialog
+        isOpen={showFileDialog}
+        onClose={() => setShowFileDialog(false)}
+        onFileCreated={() => {
+          setShowFileDialog(false);
+          onToggleFiles(dataset.id);
+          reloadDatasetFiles(dataset.id); // This now uses the prop
+        }}
+        datasetId={dataset.id}
+      />
     </div>
   );
 }

@@ -174,17 +174,12 @@ export async function fetchFilesByDataset(datasetId: string): Promise<File[]> {
   }
 }
 
-export async function fetchAllFiles(): Promise<File[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/files`);
-    if (!response.ok) {
-      throw new Error(`Error fetching files: ${response.statusText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching all files:', error);
-    return [];
+export async function fetchAllFiles(): Promise<{id: string, name: string}[]> {
+  const response = await fetch(`${API_BASE_URL}/api/files`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch files');
   }
+  return response.json();
 }
 
 export interface FlowCreateData {
@@ -272,17 +267,23 @@ export async function createTransformation(transformationData: { id: string; nam
   return response.json();
 }
 
-export async function createFile(fileData: { id: string; name: string; dataset_id: string; fileType: string; file_path?: string }) {
-  // Update the API endpoint to include the base URL
+export async function createFile(fileData: { id: string; dataset_id: string; fileType: string; file_path?: string }) {
   const response = await fetch(`${API_BASE_URL}/api/files`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(fileData),
+    body: JSON.stringify({
+      id: fileData.id,
+      dataset_id: fileData.dataset_id,
+      fileType: fileData.fileType,  // Remove toUpperCase()
+      file_path: fileData.file_path || null
+    }),
   });
+  
   if (!response.ok) {
-    throw new Error('Failed to create file');
+    const error = await response.json().catch(() => ({ detail: 'Failed to create file' }));
+    throw new Error(error.detail || 'Failed to create file');
   }
   return response.json();
 }
@@ -332,6 +333,21 @@ export async function associateDatasetWithProcess(datasetId: string, processId: 
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.detail || 'Failed to associate dataset with process');
+  }
+  return response.json();
+}
+
+export async function associateFileToDataset(fileId: string, datasetId: string) {
+  const response = await fetch(`${API_BASE_URL}/api/datasets/${datasetId}/files/${fileId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  });
+  
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: 'Failed to associate file' }));
+    throw new Error(error.detail || 'Failed to associate file');
   }
   return response.json();
 }

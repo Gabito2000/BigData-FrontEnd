@@ -527,6 +527,14 @@ export default function DataLakeFlowManager() {
     });
   };
 
+  const reloadDatasetFiles = async (datasetId: string) => {
+    // add dataset files to dataset
+    const files = await fetchFilesByDataset(datasetId);
+    setFlows((currentFlows) =>
+      updateFlowsWithFiles(currentFlows, datasetId, files)
+    );
+  }
+
   const updateDatasetFiles = (item: ProcessItemWithIcon, datasetId: string) => {
     if (item.type === "dataset" && item.id === datasetId) {
       const dataset = item as DatasetWithIcon;
@@ -659,6 +667,7 @@ export default function DataLakeFlowManager() {
         isLoading={isLoading}
         onToggleFiles={toggleFileVisibility}
         onSearch={setFilterText}
+        reloadDatasetFiles={reloadDatasetFiles}
       />
     );
   };
