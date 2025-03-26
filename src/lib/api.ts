@@ -301,3 +301,37 @@ export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
     return [];
   }
 }
+
+export async function associateWorkerWithProcess(workerId: string, processId: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/asociate_worker?worker_id=${encodeURIComponent(workerId)}&process_id=${encodeURIComponent(processId)}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to associate worker with process');
+  }
+  return response.json();
+}
+
+export async function associateDatasetWithProcess(datasetId: string, processId: string, isInput: boolean) {
+  const response = await fetch(
+    `${API_BASE_URL}/api/associate_dataset?dataset_id=${encodeURIComponent(datasetId)}&process_id=${encodeURIComponent(processId)}&is_input=${isInput}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to associate dataset with process');
+  }
+  return response.json();
+}

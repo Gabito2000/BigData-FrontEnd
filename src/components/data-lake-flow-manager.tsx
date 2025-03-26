@@ -31,6 +31,7 @@ import { TransactionItem } from "@/components/transaction-item";
 import { FlowCreationDialog } from "./flow-creation-dialog";
 import { ProcessCreationDialog } from "./process-creation-dialog";
 import { DatasetCreationDialog } from "./dataset-creation-dialog";
+import { WorkerCreationDialog } from "./worker-creation-dialog";
 
 // Extended types with icon property
 type DatasetWithIcon = Dataset & {
@@ -58,6 +59,7 @@ type FlowWithIcons = Omit<Flow, "processes"> & {
 };
 
 export default function DataLakeFlowManager() {
+  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isDatasetDialogOpen, setIsDatasetDialogOpen] = useState(false);
   const [selectedProcessId, setSelectedProcessId] = useState<string | null>(
     null
@@ -136,7 +138,39 @@ export default function DataLakeFlowManager() {
         );
       });
   };
-
+  const handleWorkerCreated = async () => {
+    try {
+      const flowsData = await fetchFlows();
+      const flowsWithIcons = flowsData.map(flow => ({
+        ...flow,
+        processes: flow.processes.map(process => ({
+          ...process,
+          worker: {
+            input: process.worker.input
+              .map(item => ({
+                ...item,
+                icon: item.type === 'dataset' 
+                  ? <Database className="text-blue-500" />
+                  : <Code className="text-green-500" />,
+                showFiles: false,
+                showScripts: false,
+                type: item.type
+              })),
+            output: process.worker.output
+              .map(item => ({
+                ...item,
+                icon: <Database className="text-purple-500" />,
+                showFiles: false,
+                type: 'dataset'
+              }))
+          }
+        }))
+      }));
+      setFlows(flowsWithIcons);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+    }
+  };
   const [flows, setFlows] = useState<FlowWithIcons[]>([]);
   const [tags, setTags] = useState<{ id: string; count?: number }[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -715,6 +749,12 @@ export default function DataLakeFlowManager() {
         onDatasetCreated={handleDatasetCreated}
         processId={selectedProcessId || ""}
       />
+      <WorkerCreationDialog
+        isOpen={isWorkerDialogOpen}
+        onClose={() => setIsWorkerDialogOpen(false)}
+        onWorkerCreated={handleWorkerCreated}
+        processId={selectedProcessId || ""}
+      />
       {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
         const hasProcessesInZone = filteredFlows.some((flow) =>
           flow.processes.some((process) => process.zone === zone)
@@ -744,34 +784,35 @@ export default function DataLakeFlowManager() {
                 (flow) =>
                   flow.processes.some((process) => process.zone === zone) && (
                     <div
-                      key={zone}
+                      key={flow.id}
                       className="border rounded-lg p-4 bg-white shadow-sm mb-4"
                     >
-                      <div className="flex justify-between items-center mb-3 pb-2 border-b">
-                        <h2 className="text-xl font-semibold">{zone}</h2>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => {
-                            setSelectedFlowId(flow.id);
-                            setIsProcessDialogOpen(true);
-                          }}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      
                       <div key={flow.id} className="mb-3">
                         <div className="flex justify-between items-center mb-2">
                           <h3 className="font-medium text-gray-700">
                             {flow.name}
                           </h3>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                setSelectedFlowId(flow.id);
+                                setIsProcessDialogOpen(true);
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                            
                           <SearchButton
                             text={flow.name}
                             size="icon"
                             iconSize="h-4 w-4"
                             onClick={() => handleFilterByFlow(flow)}
                           />
+                          </div>
                         </div>
                         {flow.processes
                           .filter((process) => process.zone === zone)
@@ -785,17 +826,7 @@ export default function DataLakeFlowManager() {
                                   {process.name}
                                 </h4>
                                 <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="icon"
-                                    className="h-6 w-6"
-                                    onClick={() => {
-                                      setSelectedProcessId(process.id);
-                                      setIsDatasetDialogOpen(true);
-                                    }}
-                                  >
-                                    <Plus className="h-3 w-3" />
-                                  </Button>
+                                  
                                   <SearchButton
                                     text={process.name}
                                     size="icon"
@@ -822,6 +853,17 @@ export default function DataLakeFlowManager() {
                                     >
                                       <Plus className="h-3 w-3" />
                                     </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => {
+                                        setSelectedProcessId(process.id);
+                                        setIsWorkerDialogOpen(true);
+                                      }}
+                                    >
+                                      <Code className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                   <div className="flex flex-col gap-1">
                                     {process.worker.input.map((item) => (
@@ -837,8 +879,30 @@ export default function DataLakeFlowManager() {
                                   <div className="text-sm">→</div>
                                 </div>
                                 <div className="flex-1">
-                                  <div className="text-xs text-gray-500 mb-1">
-                                    Output
+                                  <div className="flex justify-between items-center mb-1">
+                                    <div className="text-xs text-gray-500">Output</div>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => {
+                                        setSelectedProcessId(process.id);
+                                        setIsDatasetDialogOpen(true);
+                                      }}
+                                    >
+                                      <Plus className="h-3 w-3" />
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-6 w-6"
+                                      onClick={() => {
+                                        setSelectedProcessId(process.id);
+                                        setIsWorkerDialogOpen(true);
+                                      }}
+                                    >
+                                      <Code className="h-3 w-3" />
+                                    </Button>
                                   </div>
                                   <div className="flex flex-col gap-1">
                                     {process.worker.output.map((item) => (
