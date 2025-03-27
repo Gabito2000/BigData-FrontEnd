@@ -901,17 +901,6 @@ export default function DataLakeFlowManager() {
                                     >
                                       <Plus className="h-3 w-3" />
                                     </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-6 w-6"
-                                      onClick={() => {
-                                        setSelectedProcessId(process.id);
-                                        setIsWorkerDialogOpen(true);
-                                      }}
-                                    >
-                                      <Code className="h-3 w-3" />
-                                    </Button>
                                   </div>
                                   <div className="flex flex-col gap-1">
                                     {process.worker.output.map((item) => (
