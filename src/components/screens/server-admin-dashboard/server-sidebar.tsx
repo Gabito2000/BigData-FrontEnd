@@ -1,8 +1,8 @@
 import React from "react";
-import { ServerInfo } from "../lib/types";
-import { StorageInfo } from "./storage-info";
-import { ZoneViewer } from "./zone-viewer";
-import { ProcessList } from "./process-list";
+import { ServerInfo } from "@/lib/types";
+import { StorageInfo } from "@/components/screens/main-layout/storage-info";
+import { ZoneViewer } from "@/components/screens/main-layout/zone-viewer";
+import { ProcessList } from "@/components/screens/main-layout/process-list";
 
 export const ServerSidebar: React.FC<{ serverInfo: ServerInfo }> = ({
   serverInfo,
@@ -13,7 +13,7 @@ export const ServerSidebar: React.FC<{ serverInfo: ServerInfo }> = ({
 
       <StorageInfo storage={serverInfo.storage} />
       <ZoneViewer zones={serverInfo.zones} />
-      <ProcessList processes={serverInfo.processes} />
+      <ProcessList pipelines={serverInfo.pipelines} />
     </div>
   );
 };

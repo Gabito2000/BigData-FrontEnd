@@ -17,8 +17,7 @@ import {
   initialServersData,
   FileSystemItem,
   FileSystemItemHandler,
-} from "../lib/types";
-import { fetchFileSystemData } from "../lib/api";
+} from "@/lib/types";
 
 export function FullScreenServerAdminDashboardComponent() {
   const [selectedServer, setSelectedServer] = useState(0);
@@ -40,7 +39,7 @@ export function FullScreenServerAdminDashboardComponent() {
           children: [],
         },
         storage: { total: 1000, used: 0 },
-        processes: [],
+        pipelines: [],
         zones: [
           { name: "landing", size: 0, files: 0 },
           { name: "raw", size: 0, files: 0 },

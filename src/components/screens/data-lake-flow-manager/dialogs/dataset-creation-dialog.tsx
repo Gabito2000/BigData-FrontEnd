@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { createDataset, fetchFlows, associateDatasetWithProcess } from "@/lib/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createDataset, fetchFlows, associateDatasetWithPipeline } from "@/lib/api";
 import { v4 as uuidv4 } from 'uuid';
 
 interface DatasetCreationDialogProps {
@@ -28,7 +28,7 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, proce
       fetchFlows().then((flows) => {
         const datasets: {id: string, name: string}[] = [];
         flows.forEach(flow => {
-          flow.processes.forEach(process => {
+          flow.pipelines.forEach(process => {
             process.worker.input.forEach(item => {
               if (item.type === 'dataset') {
                 datasets.push({ id: item.id, name: item.name });
@@ -62,7 +62,7 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, proce
         });
       } else {
         // Here you would add logic to associate existing dataset
-        await associateDatasetWithProcess(existingDatasetId, processId, isInput);
+        await associateDatasetWithPipeline(existingDatasetId, processId, isInput);
       }
       
       onDatasetCreated();
@@ -82,7 +82,7 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, proce
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add Dataset to Process</DialogTitle>
+          <DialogTitle>Add Dataset to Pipeline</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">

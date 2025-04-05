@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "./ui/button";
+import { Button } from "@/components/ui/button"
 import { Search, ChevronDown, ChevronRight, FileIcon, Plus } from "lucide-react";
-import { FileCreationDialog } from "./file-creation-dialog";
+import { FileCreationDialog } from "./dialogs/file-creation-dialog";
 import { Dataset, File } from "@/lib/api";
 
 type DatasetWithIcon = Dataset & {

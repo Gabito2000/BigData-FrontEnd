@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { createWorker, associateWorkerWithProcess, fetchFlows } from "@/lib/api";
-import { Label } from "./ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { createWorker, associateWorkerWithPipeline, fetchFlows } from "@/lib/api";
+import { Label } from "@/components/ui/label";
 
 interface WorkerCreationDialogProps {
   isOpen: boolean;
@@ -26,7 +26,7 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, process
       fetchFlows().then((flows) => {
         const workers: {id: string, name: string}[] = [];
         flows.forEach(flow => {
-          flow.processes.forEach(process => {
+          flow.pipelines.forEach(process => {
             if (process.worker && process.worker.input) {
               process.worker.input.forEach(item => {
                 if (item.type === 'worker') {
@@ -55,7 +55,7 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, process
         });
       } else {
         // Instead of creating a new worker, create a relationship
-        await associateWorkerWithProcess(existingWorkerId, processId);
+        await associateWorkerWithPipeline(existingWorkerId, processId);
       }
       onWorkerCreated();
       onClose();

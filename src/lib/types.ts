@@ -68,11 +68,6 @@ export class FileSystemItemHandler {
   }
 }
 
-
-
-
-
-
 export type Process = {
   id: number
   name: string
@@ -94,7 +89,7 @@ export type ServerInfo = {
     total: number
     used: number
   }
-  processes: Process[]
+  pipelines: Process[]
   zones: Zone[]
 }
 
@@ -110,7 +105,7 @@ export const initialServersData: ServerInfo[] = [
       total: 1000,
       used: 400
     },
-    processes: [
+    pipelines: [
       { id: 1, name: "nginx", cpu: 0.5, memory: 1.2 },
       { id: 2, name: "mysql", cpu: 1.5, memory: 3.7 },
     ],

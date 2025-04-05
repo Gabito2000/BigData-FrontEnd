@@ -7,14 +7,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Process } from "../lib/types";
+import { Process } from "@/lib/types";
 
-export const ProcessList: React.FC<{ processes: Process[] }> = ({
-  processes,
+export const ProcessList: React.FC<{ pipelines: Process[] }> = ({
+  pipelines,
 }) => {
   return (
     <div className="mb-4">
-      <h3 className="text-lg font-semibold mb-2">Processs</h3>
+      <h3 className="text-lg font-semibold mb-2">Pipelines</h3>
       <Table>
         <TableHeader>
           <TableRow>
@@ -25,7 +25,7 @@ export const ProcessList: React.FC<{ processes: Process[] }> = ({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {processes.map((process) => (
+          {pipelines.map((process) => (
             <TableRow key={process.id}>
               <TableCell>{process.id}</TableCell>
               <TableCell>{process.name}</TableCell>

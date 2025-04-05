@@ -3,38 +3,136 @@ import { FileSystemItem } from './types'
 // Base URL for API requests
 const API_BASE_URL = 'http://localhost:8000';
 
-// Types for data lake flow management
-export type Process = {
+// Backend types (matching the FastAPI models)
+interface BackendPipeline {
+  id: string;
+  name: string;
+  flow_id: string;
+  zone: string;
+}
+
+interface BackendWorker {
+  id: string;
+  name: string;
+  pipeline_id: string;
+}
+
+interface BackendDataset {
+  id: string;
+  name: string;
+  pipeline_id: string;
+  sourceUrl?: string;
+  is_input: boolean;
+}
+
+// Frontend types (existing types with conversion methods)
+export type Pipeline = {
   id: string;
   name: string;
   zone: "Landing" | "Raw" | "Trusted" | "Refined";
   worker: {
-    input: ProcessItem[];
-    output: ProcessItem[];
+    input: PipelineItem[];
+    output: PipelineItem[];
   };
 };
 
-export type ProcessItem = Dataset | Worker;
+export type PipelineItem = Dataset | Worker;
 
 export type Dataset = {
   id: string;
   name: string;
   sourceUrl?: string;
   type: 'dataset';
-  is_input: boolean; // Add this field to track input/output status
+  is_input: boolean;
 };
 
 export type Worker = {
   id: string;
   name: string;
-  type: 'worker'; // Added type property to identify workers
+  type: 'worker';
 };
 
 export type Flow = {
   id: string;
   name: string;
-  processes: Process[];
+  pipelines: Pipeline[];
 };
+
+// Updated Backend types to match the actual response
+interface BackendFlow {
+  id: string;
+  pipelines: BackendPipeline[];
+}
+
+interface BackendPipeline {
+  id: string;
+  zone: string;
+  datasets: BackendDataset[];
+  workers: BackendWorker[];
+}
+
+interface BackendWorker {
+  id: string;
+}
+
+interface BackendDataset {
+  id: string;
+  isInput: boolean;
+  isOutput: boolean;
+}
+
+function convertBackendPipelineToPipeline(pipeline: BackendPipeline): Pipeline {
+  const element = {
+    id: pipeline.id,
+    name: pipeline.id, // Using id as name since name is not provided in backend
+    zone: pipeline.zone as "Landing" | "Raw" | "Trusted" | "Refined",
+    worker: {
+      input: [
+        ...pipeline.datasets.filter(d => d.isInput).map(d => ({
+          id: d.id,
+          name: d.id, // Using id as name since name is not provided
+          type: 'dataset' as const,
+          is_input: true
+        })),
+        ...pipeline.workers
+          .filter(w => w.id !== null)
+          .map(w => ({
+            id: w.id as string,
+            name: w.id as string, // Using id as name since name is not provided
+            type: 'worker' as const
+          }))
+      ],
+      output: pipeline.datasets.filter(d => d.isOutput).map(d => ({
+        id: d.id,
+        name: d.id, // Using id as name since name is not provided
+        type: 'dataset' as const,
+        is_input: false
+      }))
+    }
+  };
+  console.log("element", element)
+  return element;
+}
+
+export const fetchFlows = async (): Promise<Flow[]> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/flows`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch flows: ${response.statusText}`);
+    }
+    const flows: BackendFlow[] = await response.json();
+    
+    return flows.map((flow) => ({
+      id: flow.id,
+      name: flow.id, // Using id as name since name is not provided
+      pipelines: flow.pipelines.map(pipeline => convertBackendPipelineToPipeline(pipeline))
+    }));
+  } catch (error) {
+    console.error('Error fetching flows:', error);
+    throw error;
+  }
+};
+
 
 // This is a mock API function to simulate fetching file system data
 export const fetchFileSystemData = async (path: string): Promise<FileSystemItem> => {
@@ -66,46 +164,6 @@ export const fetchFileSystemData = async (path: string): Promise<FileSystemItem>
   return mockData
 }
 
-// Fetch all flows from the backend
-export const fetchFlows = async (): Promise<Flow[]> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/flows`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch flows: ${response.statusText}`);
-    }
-    const flows = await response.json();
-    
-    // Ensure each item in input and output has the correct type property
-    return flows.map((flow: Flow) => ({
-      ...flow,
-      processes: flow.processes.map((process: Process) => ({
-        ...process,
-        worker: {
-          input: process.worker.input.map((item: ProcessItem) => {
-            // If the item already has a type property, use it
-            if (item.type === 'dataset' || item.type === 'worker') {
-              return item;
-            }
-            return {
-              ...item,
-              type: item.sourceUrl !== undefined ? 'dataset' : 'worker'
-            };
-          }),
-          output: process.worker.output.map((item: ProcessItem) => ({
-            ...item,
-            // Outputs are typically datasets
-            type: 'dataset'
-          }))
-        }
-      }))
-    }));
-  } catch (error) {
-    console.error('Error fetching flows:', error);
-    throw error;
-  }
-}
-
-
 // Add these types for tag management
 export type Tag = {
   id: string;
@@ -116,7 +174,7 @@ export type TaggedElements = {
   users: any[];
   zones: any[];
   flows: Flow[];
-  processes: any[];
+  pipelines: any[];
   datasets: any[];
   workers: any[];
   files: any[];
@@ -205,16 +263,25 @@ export async function createFlow(flowData: FlowCreateData) {
   return response.json();
 }
 
-export async function createProcess(processData: { id: string; name: string; flow_id: string; zone: string }) {
-  const response = await fetch(`${API_BASE_URL}/api/processes`, {
+// Modified create functions to match backend expectations
+export async function createPipeline(processData: { id: string; name: string; flow_id: string; zone: string }) {
+  const pipelineData = {
+    id: processData.id,
+    name: processData.name,
+    flow_id: processData.flow_id,
+    zone: processData.zone
+  };
+
+  const response = await fetch(`${API_BASE_URL}/api/pipeline`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(processData),
+    body: JSON.stringify(pipelineData),
   });
+  
   if (!response.ok) {
-    throw new Error('Failed to create process');
+    throw new Error('Failed to create pipeline');
   }
   return response.json();
 }
@@ -303,7 +370,7 @@ export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
   }
 }
 
-export async function associateWorkerWithProcess(workerId: string, processId: string) {
+export async function associateWorkerWithPipeline(workerId: string, processId: string) {
   const response = await fetch(
     `${API_BASE_URL}/api/asociate_worker?worker_id=${encodeURIComponent(workerId)}&process_id=${encodeURIComponent(processId)}`,
     {
@@ -320,7 +387,7 @@ export async function associateWorkerWithProcess(workerId: string, processId: st
   return response.json();
 }
 
-export async function associateDatasetWithProcess(datasetId: string, processId: string, isInput: boolean) {
+export async function associateDatasetWithPipeline(datasetId: string, processId: string, isInput: boolean) {
   const response = await fetch(
     `${API_BASE_URL}/api/associate_dataset?dataset_id=${encodeURIComponent(datasetId)}&process_id=${encodeURIComponent(processId)}&is_input=${isInput}`,
     {

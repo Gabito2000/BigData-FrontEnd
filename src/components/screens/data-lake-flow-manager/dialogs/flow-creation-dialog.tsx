@@ -1,21 +1,20 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { createProcess } from "@/lib/api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { createFlow } from "@/lib/api";
 import { v4 as uuidv4 } from 'uuid';
 
-interface ProcessCreationDialogProps {
+interface FlowCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onProcessCreated: () => void;
-  flowId: string;
+  onFlowCreated: () => void;
 }
 
-export function ProcessCreationDialog({ isOpen, onClose, onProcessCreated, flowId }: ProcessCreationDialogProps) {
+export function FlowCreationDialog({ isOpen, onClose, onFlowCreated }: FlowCreationDialogProps) {
   const [name, setName] = useState("");
-  const [zone, setZone] = useState<"Landing" | "Raw" | "Trusted" | "Refined">("Landing");
+  const [description, setDescription] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,16 +24,15 @@ export function ProcessCreationDialog({ isOpen, onClose, onProcessCreated, flowI
     setError(null);
 
     try {
-      await createProcess({
+      await createFlow({
         id: name,
         name,
-        flow_id: flowId,
-        zone: zone.toLowerCase()
+        description
       });
-      onProcessCreated();
+      onFlowCreated();
       onClose();
       setName("");
-      setZone("Landing");
+      setDescription("");
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -46,7 +44,7 @@ export function ProcessCreationDialog({ isOpen, onClose, onProcessCreated, flowI
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Create New Process</DialogTitle>
+          <DialogTitle>Create New Flow</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
@@ -58,25 +56,21 @@ export function ProcessCreationDialog({ isOpen, onClose, onProcessCreated, flowI
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Enter process name"
+                placeholder="Enter flow name"
                 required
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="zone" className="text-sm font-medium">
-                Zone
+              <label htmlFor="description" className="text-sm font-medium">
+                Description
               </label>
-              <Select value={zone} onValueChange={(value) => setZone(value as typeof zone)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select zone" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Landing">Landing</SelectItem>
-                  <SelectItem value="Raw">Raw</SelectItem>
-                  <SelectItem value="Trusted">Trusted</SelectItem>
-                  <SelectItem value="Refined">Refined</SelectItem>
-                </SelectContent>
-              </Select>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Enter flow description"
+                rows={3}
+              />
             </div>
             {error && (
               <p className="text-sm text-red-500">{error}</p>
@@ -92,7 +86,7 @@ export function ProcessCreationDialog({ isOpen, onClose, onProcessCreated, flowI
               Cancel
             </Button>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Creating..." : "Create Process"}
+              {isLoading ? "Creating..." : "Create Flow"}
             </Button>
           </DialogFooter>
         </form>

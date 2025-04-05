@@ -1,4 +1,4 @@
-import { SidebarNav } from "@/components/sidebar-nav";
+import { SidebarNav } from '@/components/screens/main-layout/sidebar-nav'
 function App() {
   return (
     <div>

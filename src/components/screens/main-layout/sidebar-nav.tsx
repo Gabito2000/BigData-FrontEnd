@@ -36,12 +36,15 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-import DataLakeFlowManagerComponent from "@/components/data-lake-flow-manager";
-import { DataLakeExplorerComponent } from "@/components/data-lake-explorer";
-import { DataLakeCuadernos } from "@/components/data-lake-cuadernos";
-import UserPermissions from "@/components/user-permissions";
-import { FullScreenServerAdminDashboardComponent } from "@/components/full-screen-server-admin-dashboard";
-import { WindowsStyleFileViewer } from "@/components/windows-style-file-viewer";
+// Update these imports
+import DataLakeFlowManagerComponent from "@/components/screens/data-lake-flow-manager/data-lake-flow-manager";
+import { DataLakeExplorerComponent } from "@/components/screens/data-lake-explorer/data-lake-explorer";
+import { DataLakeCuadernos } from "@/components/screens/notebooks/data-lake-cuadernos";
+import UserPermissions from "@/components/screens/user-permissions/user-permissions";
+import { FullScreenServerAdminDashboardComponent } from "@/components/screens/server-admin-dashboard/full-screen-server-admin-dashboard";
+import { WindowsStyleFileViewer } from "@/components/screens/server-admin-dashboard/windows-style-file-viewer";
+
+// Keep other existing imports
 import { FileSystemItemHandler } from "@/lib/types";
 // import WasmTerminalComponent from "@/components/wasm-terminal-component";
 
@@ -412,3 +415,8 @@ export function SidebarNav() {
     </Router>
   );
 }
+
+// Remove these invalid imports from inside the JSX:
+// import { ZoneViewer } from './zone-viewer'
+// import { PipelineList } from './process-list' 
+// import { StorageInfo } from './storage-info'

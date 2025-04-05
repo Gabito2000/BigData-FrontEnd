@@ -1,5 +1,5 @@
 import React from "react";
-import { Zone } from "../lib/types";
+import { Zone } from "@/lib/types";
 
 export const ZoneViewer: React.FC<{ zones: Zone[] }> = ({ zones }) => {
   const totalSize = zones.reduce((acc, zone) => acc + zone.size, 0);
