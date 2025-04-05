@@ -8,7 +8,6 @@ export type FileSystemItem = {
   children?: FileSystemItem[];
 };
 
-
 export class FileSystemItemHandler {
   data: FileSystemItem;
   path: string;
@@ -93,9 +92,6 @@ export type ServerInfo = {
   zones: Zone[]
 }
 
-
-
-
 export const initialServersData: ServerInfo[] = [
   {
     name: "Servidor 1",
@@ -120,3 +116,92 @@ export const initialServersData: ServerInfo[] = [
   },
   // Add more servers as needed
 ]
+
+export interface BackendPipeline {
+  id: string;
+  name: string;
+  flow_id: string;
+  zone: string;
+}
+
+export interface BackendWorker {
+  id: string;
+  name: string;
+  pipeline_id: string;
+}
+
+export interface BackendDataset {
+  id: string;
+  name: string;
+  pipeline_id: string;
+  sourceUrl?: string;
+  is_input: boolean;
+}
+
+export type Pipeline = {
+  id: string;
+  name: string;
+  zone: "Landing" | "Raw" | "Trusted" | "Refined";
+  worker: {
+    input: PipelineItem[];
+    output: PipelineItem[];
+  };
+};
+
+export type PipelineItem = Dataset | Worker;
+
+export type Dataset = {
+  id: string;
+  name: string;
+  sourceUrl?: string;
+  type: 'dataset';
+  is_input: boolean;
+};
+
+export type Worker = {
+  id: string;
+  name: string;
+  type: 'worker';
+};
+
+export type Flow = {
+  id: string;
+  name: string;
+  pipelines: Pipeline[];
+};
+
+export interface BackendFlow {
+  id: string;
+  pipelines: BackendPipeline[];
+}
+
+export type Tag = {
+  id: string;
+  count?: number;
+};
+
+export type TaggedElements = {
+  users: any[];
+  zones: any[];
+  flows: Flow[];
+  pipelines: any[];
+  datasets: any[];
+  workers: any[];
+  files: any[];
+  transformations: any[];
+};
+
+export interface File {
+  id: string;
+  name?: string;
+  fileType?: string;
+  filePath?: string;
+  dataset_id?: string;
+}
+
+export interface FlowCreateData {
+  id: string;
+  name: string;
+  description?: string;
+}
+

@@ -58,6 +58,11 @@ type FlowWithIcons = Omit<Flow, "pipelines"> & {
   pipelines: PipelineWithIcons[];
 };
 
+// Add new imports at the top
+import { FlowFilter } from "./FlowFilter";
+import { ZoneContainer } from "./ZoneContainer";
+import { PipelineComponent } from "./PipelineComponent";
+
 export default function DataLakeFlowManager() {
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isDatasetDialogOpen, setIsDatasetDialogOpen] = useState(false);
@@ -702,7 +707,6 @@ export default function DataLakeFlowManager() {
             variant="ghost"
             size="icon"
             onClick={() => {
-// Remove setSearchQuery since it's not defined and not needed
               setFilterText("");
             }}
             className="h-6 w-6"
@@ -868,3 +872,12 @@ export default function DataLakeFlowManager() {
     </div>
   );
 }
+
+// Remove the existing type definitions and replace with:
+import type {
+  DatasetWithIcon,
+  WorkerWithIcon,
+  PipelineItemWithIcon,
+  PipelineWithIcons,
+  FlowWithIcons
+} from "./types";

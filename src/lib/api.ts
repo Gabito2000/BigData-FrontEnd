@@ -3,83 +3,19 @@ import { FileSystemItem } from './types'
 // Base URL for API requests
 const API_BASE_URL = 'http://localhost:8000';
 
-// Backend types (matching the FastAPI models)
-interface BackendPipeline {
-  id: string;
-  name: string;
-  flow_id: string;
-  zone: string;
-}
 
-interface BackendWorker {
-  id: string;
-  name: string;
-  pipeline_id: string;
-}
+import type {
+  BackendPipeline,
+  Pipeline,
+  Flow,
+  BackendFlow,
+  Tag,
+  TaggedElements,
+  File,
+  FlowCreateData
+} from './types';
 
-interface BackendDataset {
-  id: string;
-  name: string;
-  pipeline_id: string;
-  sourceUrl?: string;
-  is_input: boolean;
-}
 
-// Frontend types (existing types with conversion methods)
-export type Pipeline = {
-  id: string;
-  name: string;
-  zone: "Landing" | "Raw" | "Trusted" | "Refined";
-  worker: {
-    input: PipelineItem[];
-    output: PipelineItem[];
-  };
-};
-
-export type PipelineItem = Dataset | Worker;
-
-export type Dataset = {
-  id: string;
-  name: string;
-  sourceUrl?: string;
-  type: 'dataset';
-  is_input: boolean;
-};
-
-export type Worker = {
-  id: string;
-  name: string;
-  type: 'worker';
-};
-
-export type Flow = {
-  id: string;
-  name: string;
-  pipelines: Pipeline[];
-};
-
-// Updated Backend types to match the actual response
-interface BackendFlow {
-  id: string;
-  pipelines: BackendPipeline[];
-}
-
-interface BackendPipeline {
-  id: string;
-  zone: string;
-  datasets: BackendDataset[];
-  workers: BackendWorker[];
-}
-
-interface BackendWorker {
-  id: string;
-}
-
-interface BackendDataset {
-  id: string;
-  isInput: boolean;
-  isOutput: boolean;
-}
 
 function convertBackendPipelineToPipeline(pipeline: BackendPipeline): Pipeline {
   const element = {
@@ -134,7 +70,6 @@ export const fetchFlows = async (): Promise<Flow[]> => {
 };
 
 
-// This is a mock API function to simulate fetching file system data
 export const fetchFileSystemData = async (path: string): Promise<FileSystemItem> => {
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500))
@@ -164,24 +99,6 @@ export const fetchFileSystemData = async (path: string): Promise<FileSystemItem>
   return mockData
 }
 
-// Add these types for tag management
-export type Tag = {
-  id: string;
-  count?: number;
-};
-
-export type TaggedElements = {
-  users: any[];
-  zones: any[];
-  flows: Flow[];
-  pipelines: any[];
-  datasets: any[];
-  workers: any[];
-  files: any[];
-  transformations: any[];
-};
-
-// Add these functions to fetch tags and tagged elements
 export const fetchTags = async (): Promise<Tag[]> => {
   try {
     const response = await fetch(`${API_BASE_URL}/api/tags`);
@@ -208,16 +125,6 @@ export const fetchElementsByTag = async (tagId: string): Promise<TaggedElements>
   }
 };
 
-// Add this to your existing API file
-
-export interface File {
-  id: string;
-  name?: string;
-  fileType?: string;
-  filePath?: string;
-  dataset_id?: string;  // Add this to match backend
-}
-
 export async function fetchFilesByDataset(datasetId: string): Promise<File[]> {
   try {
     // Update the API endpoint to include the base URL
@@ -238,12 +145,6 @@ export async function fetchAllFiles(): Promise<{id: string, name: string}[]> {
     throw new Error('Failed to fetch files');
   }
   return response.json();
-}
-
-export interface FlowCreateData {
-  id: string;
-  name: string;
-  description?: string;
 }
 
 export async function createFlow(flowData: FlowCreateData) {
@@ -355,7 +256,6 @@ export async function createFile(fileData: { id: string; dataset_id: string; fil
   return response.json();
 }
 
-// Add this function to your existing API functions
 export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
   try {
     // Fixed endpoint to use plural 'transformations' instead of singular
