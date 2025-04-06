@@ -1,19 +1,22 @@
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, DatabaseIcon, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Replace existing DatasetWithIcon import with:
 import type { DatasetWithIcon } from "./types";
 
 interface DatasetComponentProps {
   dataset: DatasetWithIcon;
+  onFilter: (text: string) => void;
   onToggleFiles: (datasetId: string) => void;
 }
 
 export function DatasetComponent({
   dataset,
-  onToggleFiles
+  onToggleFiles,
+  onFilter,
 }: DatasetComponentProps) {
   return (
     <div className="flex items-center p-2 border rounded hover:bg-gray-50">
+      <DatabaseIcon/>
       <Button
         variant="ghost"
         size="icon"
@@ -40,7 +43,7 @@ export function DatasetComponent({
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          // Handle search implementation here
+          onFilter(dataset.name); // Changed from dataset.id to dataset.name
         }}
       >
         <Search className="h-4 w-4" />

@@ -10,10 +10,10 @@ interface WorkerCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onWorkerCreated: () => void;
-  processId: string;
+  pipelineId: string;
 }
 
-export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, processId }: WorkerCreationDialogProps) {
+export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelineId }: WorkerCreationDialogProps) {
   const [id, setId] = useState("");
   const [isNewWorker, setIsNewWorker] = useState(true);
   const [existingWorkerId, setExistingWorkerId] = useState("");
@@ -51,11 +51,11 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, process
         await createWorker({
           id: id,
           name: id,
-          process_id: processId
+          process_id: pipelineId
         });
       } else {
         // Instead of creating a new worker, create a relationship
-        await associateWorkerWithPipeline(existingWorkerId, processId);
+        await associateWorkerWithPipeline(existingWorkerId, pipelineId);
       }
       onWorkerCreated();
       onClose();

@@ -1,25 +1,25 @@
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PipelineWithIcons } from "./data-lake-flow-manager";
-import { DatasetComponent } from "./DatasetComponent";
-import { WorkerComponent } from "./WorkerComponent";
+import { PipelineWithIcons } from "@/components/screens/data-lake-flow-manager/types";
+import { DatasetComponent } from "@/components/screens/data-lake-flow-manager/DatasetComponent";
+import { WorkerComponent } from "@/components/screens/data-lake-flow-manager/WorkerComponent";
 
 interface PipelineComponentProps {
   pipeline: PipelineWithIcons;
   isExpanded: boolean;
   onToggle: () => void;
-  onFilterByPipeline: (pipeline: PipelineWithIcons) => void;
   onToggleFiles: (datasetId: string) => void;
   onToggleScripts: (workerId: string) => void;
+  onFilter: (text: string) => void;
 }
 
 export function PipelineComponent({
   pipeline,
   isExpanded,
   onToggle,
-  onFilterByPipeline,
+  onFilter,
   onToggleFiles,
-  onToggleScripts
+  onToggleScripts,
 }: PipelineComponentProps) {
   return (
     <div className="mb-4 border rounded-lg overflow-hidden">
@@ -36,9 +36,9 @@ export function PipelineComponent({
           variant="ghost"
           size="sm"
           className="ml-auto"
-          onClick={() => onFilterByPipeline(pipeline)}
+          onClick={() => onFilter(pipeline.name)}
         >
-          Filter
+          <Search className="h-4 w-4" />
         </Button>
       </div>
       
@@ -53,12 +53,14 @@ export function PipelineComponent({
                     key={item.id}
                     dataset={item}
                     onToggleFiles={onToggleFiles}
+                    onFilter={onFilter}
                   />
                 ) : (
                   <WorkerComponent
                     key={item.id}
                     worker={item}
                     onToggleScripts={onToggleScripts}
+                    onFilter={onFilter}
                   />
                 )
               )}
@@ -67,11 +69,16 @@ export function PipelineComponent({
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-purple-600">Outputs</h4>
               {pipeline.worker.output.map((item) => (
-                <DatasetComponent
-                  key={item.id}
-                  dataset={item}
-                  onToggleFiles={onToggleFiles}
-                />
+                item.type === "dataset" ? (
+                    <DatasetComponent
+                    key={item.id}
+                    dataset={item}
+                    onToggleFiles={onToggleFiles}
+                    onFilter={onFilter}
+                    />
+                ) : (
+                    <span> THIS IS AN ERROR </span>
+                )
               ))}
             </div>
           </div>

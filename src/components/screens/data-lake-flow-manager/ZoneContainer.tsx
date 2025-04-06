@@ -24,9 +24,6 @@ export function ZoneContainer({ zone, pipelines, children }: ZoneContainerProps)
     >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-lg font-semibold">{zone} Zone</h3>
-        <span className="text-sm text-muted-foreground">
-          {pipelines.length} pipelines
-        </span>
       </div>
       {children}
     </div>

@@ -1,19 +1,22 @@
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, FolderCog} from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Replace existing WorkerWithIcon import with:
 import type { WorkerWithIcon } from "./types";
 
 interface WorkerComponentProps {
   worker: WorkerWithIcon;
+  onFilter: (text: string) => void;
   onToggleScripts: (workerId: string) => void;
 }
 
 export function WorkerComponent({
   worker,
-  onToggleScripts
+  onToggleScripts,
+  onFilter,
 }: WorkerComponentProps) {
   return (
     <div className="flex items-center p-2 border rounded hover:bg-gray-50">
+      <FolderCog />
       <Button
         variant="ghost"
         size="icon"
@@ -40,10 +43,11 @@ export function WorkerComponent({
         className="h-6 w-6"
         onClick={(e) => {
           e.stopPropagation();
-          // Handle search implementation here
+          onFilter(worker.name);
         }}
       >
         <Search className="h-4 w-4" />
+
       </Button>
     </div>
   );

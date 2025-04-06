@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button"
-import { Search, ChevronDown, ChevronRight, FileIcon, Plus } from "lucide-react";
+// Update the lucide-react import
+import { Search, ChevronDown, ChevronRight, FileIcon, Plus, Database } from "lucide-react";
 import { FileCreationDialog } from "./dialogs/file-creation-dialog";
-import { Dataset, File } from "@/lib/api";
+import { Dataset, File } from "@/lib/types";
 
 type DatasetWithIcon = Dataset & {
     icon: React.ReactNode;
@@ -69,7 +70,7 @@ export function DatasetItem({
             <ChevronRight className="h-3 w-3" />
           )}
         </Button>
-        <div className="flex-shrink-0">{dataset.icon}</div>
+        <Database className="h-4 w-4 text-blue-500" />
         <span className="text-sm truncate">{dataset.name}</span>
         <div className="ml-auto flex items-center space-x-1">
           <Button

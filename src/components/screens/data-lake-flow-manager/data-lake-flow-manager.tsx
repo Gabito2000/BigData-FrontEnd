@@ -1,37 +1,27 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Plus,
-  Code,
-  Database,
-  Globe,
-  Link as LinkIcon,
-  Search,
-  Tag as TagIcon,
-  X,
-  File as FileIcon,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
+import { Code, Database, Search } from "lucide-react";
 import {
   fetchFlows,
   fetchTags,
   fetchElementsByTag,
   fetchFilesByDataset,
   fetchScriptsByWorker,
+} from "@/lib/api";
+import {
   Flow,
   Pipeline,
   PipelineItem,
   Dataset,
   Worker,
   File,
-} from "@/lib/api";
+} from "@/lib/types";
 import { DatasetItem } from "@/components/screens/data-lake-flow-manager/dataset-item";
 import { TransactionItem } from "@/components/screens/data-lake-flow-manager/transaction-item";
 import { FlowCreationDialog } from "./dialogs/flow-creation-dialog";
 import { PipelineCreationDialog } from "./dialogs/pipeline-creation-dialog";
 import { WorkerCreationDialog } from "./dialogs/worker-creation-dialog";
-import {DatasetCreationDialog} from "./dialogs/dataset-creation-dialog";
+import { DatasetCreationDialog } from "./dialogs/dataset-creation-dialog";
 
 // Extended types with icon property
 type DatasetWithIcon = Dataset & {
@@ -59,9 +49,9 @@ type FlowWithIcons = Omit<Flow, "pipelines"> & {
 };
 
 // Add new imports at the top
-import { FlowFilter } from "./FlowFilter";
-import { ZoneContainer } from "./ZoneContainer";
-import { PipelineComponent } from "./PipelineComponent";
+import { FlowFilter } from "@/components/screens/data-lake-flow-manager/FlowFilter";
+import { ZoneContainer } from "@/components/screens/data-lake-flow-manager/ZoneContainer";
+import { PipelineComponent } from "@/components/screens/data-lake-flow-manager/PipelineComponent";
 
 export default function DataLakeFlowManager() {
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
@@ -75,34 +65,37 @@ export default function DataLakeFlowManager() {
   const handleDatasetCreated = async () => {
     try {
       const flowsData = await fetchFlows();
-      const flowsWithIcons = flowsData.map(flow => ({
+      const flowsWithIcons = flowsData.map((flow) => ({
         ...flow,
-        pipelines: flow.pipelines.map(process => ({
+        pipelines: flow.pipelines.map((process) => ({
           ...process,
           worker: {
-            input: process.worker.input
-              .map(item => ({
-                ...item,
-                icon: item.type === 'dataset' 
-                  ? <Database className="text-blue-500" />
-                  : <Code className="text-green-500" />,
-                showFiles: false,
-                showScripts: false,
-                type: item.type
-              })),
-            output: process.worker.output
-              .map(item => ({
-                ...item,
-                icon: <Database className="text-purple-500" />,
-                showFiles: false,
-                type: 'dataset'
-              }))
-          }
-        }))
+            input: process.worker.input.map((item) => ({
+              ...item,
+              icon:
+                item.type === "dataset" ? (
+                  <Database className="text-blue-500" />
+                ) : (
+                  <Code className="text-green-500" />
+                ),
+              showFiles: false,
+              showScripts: false,
+              type: item.type,
+            })),
+            output: process.worker.output.map((item) => ({
+              ...item,
+              icon: <Database className="text-purple-500" />,
+              showFiles: false,
+              type: "dataset",
+            })),
+          },
+        })),
       }));
-      setFlows(flowsWithIcons);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     }
   };
   const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
@@ -146,34 +139,37 @@ export default function DataLakeFlowManager() {
   const handleWorkerCreated = async () => {
     try {
       const flowsData = await fetchFlows();
-      const flowsWithIcons = flowsData.map(flow => ({
+      const flowsWithIcons = flowsData.map((flow) => ({
         ...flow,
-        pipelines: flow.pipelines.map(process => ({
+        pipelines: flow.pipelines.map((process) => ({
           ...process,
           worker: {
-            input: process.worker.input
-              .map(item => ({
-                ...item,
-                icon: item.type === 'dataset' 
-                  ? <Database className="text-blue-500" />
-                  : <Code className="text-green-500" />,
-                showFiles: false,
-                showScripts: false,
-                type: item.type
-              })),
-            output: process.worker.output
-              .map(item => ({
-                ...item,
-                icon: <Database className="text-purple-500" />,
-                showFiles: false,
-                type: 'dataset'
-              }))
-          }
-        }))
+            input: process.worker.input.map((item) => ({
+              ...item,
+              icon:
+                item.type === "dataset" ? (
+                  <Database className="text-blue-500" />
+                ) : (
+                  <Code className="text-green-500" />
+                ),
+              showFiles: false,
+              showScripts: false,
+              type: item.type,
+            })),
+            output: process.worker.output.map((item) => ({
+              ...item,
+              icon: <Database className="text-purple-500" />,
+              showFiles: false,
+              type: "dataset",
+            })),
+          },
+        })),
       }));
-      setFlows(flowsWithIcons);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
     }
   };
   const [flows, setFlows] = useState<FlowWithIcons[]>([]);
@@ -343,10 +339,6 @@ export default function DataLakeFlowManager() {
     }
   }, [selectedTag]);
 
-  useEffect(() => {
-    validateFlows();
-  }, [flows]);
-
   const SearchButton = ({
     text,
     size = "icon",
@@ -375,99 +367,61 @@ export default function DataLakeFlowManager() {
     );
   };
 
-  const validateFlows = () => {
-    // No validation needed for sourceUrl as it's now optional
-    // You can add other validations here if needed in the future
-    // Uncomment the code below if you want to keep track of datasets without sourceUrl
-    // flows.forEach((flow) => {
-    //   flow.pipelines.forEach((process) => {
-    //     process.worker.input.forEach((item) => {
-    //       if (item.type === 'dataset' && !('sourceUrl' in item)) {
-    //         console.info(`Dataset "${item.name}" in ${process.zone} zone has no sourceUrl.`);
-    //       }
-    //     });
-    //   });
-    // });
-  };
-
-  const getZoneColor = (zone: Pipeline["zone"]) => {
-    switch (zone.toLowerCase()) {
-      case "landing":
-        return "rgba(173, 216, 230, 0.3)";
-      case "raw":
-        return "rgba(255, 228, 196, 0.3)";
-      case "trusted":
-        return "rgba(255, 182, 193, 0.3)";
-      case "refined":
-        return "rgba(144, 238, 144, 0.3)";
-      default:
-        return "rgba(255, 255, 255, 0.3)";
-    }
-  };
-  
   const filterFlows = (flows: FlowWithIcons[], filterText: string) => {
     if (!filterText) return flows;
+    const searchTerm = filterText.toLowerCase();
 
     return flows
       .map((flow) => {
-        const filteredPipelinees = flow.pipelines
-          .filter((process) => {
-            // Check if any files in input or output datasets match the filter
-            const hasMatchingFiles = [
-              ...process.worker.input,
-              ...process.worker.output,
-            ].some((item) => {
-              if (item.type === "dataset" && (item as DatasetWithIcon).files) {
-                return (item as DatasetWithIcon).files?.some((file) =>
-                  (file.name || file.id)
-                    .toLowerCase()
-                    .includes(filterText.toLowerCase())
-                );
-              }
-              return false;
-            });
+        const filteredPipelines = flow.pipelines.filter((process) => {
+          // Check process name
+          if (process.name.toLowerCase().includes(searchTerm)) {
+            return true;
+          }
 
-            if (hasMatchingFiles) {
+          // Check input and output items
+          const hasMatchingItems = [
+            ...process.worker.input,
+            ...process.worker.output,
+          ].some((item) => {
+            // Check item name
+            if (item.name.toLowerCase().includes(searchTerm)) {
               return true;
             }
 
-            const filteredItems = [
-              ...process.worker.input,
-              ...process.worker.output,
-            ].filter((item) =>
-              item.name.toLowerCase().includes(filterText.toLowerCase())
-            );
-
-            if (filteredItems.length > 0) {
-              return {
-                ...process,
-                worker: {
-                  input: process.worker.input.filter((item) =>
-                    item.name.toLowerCase().includes(filterText.toLowerCase())
-                  ),
-                  output: process.worker.output.filter((item) =>
-                    item.name.toLowerCase().includes(filterText.toLowerCase())
-                  ),
-                },
-              };
+            // Check files if it's a dataset
+            if (item.type === "dataset") {
+              const dataset = item as DatasetWithIcon;
+              return dataset.files?.some((file) =>
+                (file.name || file.id).toLowerCase().includes(searchTerm)
+              );
             }
 
-            return process.name.toLowerCase().includes(filterText.toLowerCase())
-              ? process
-              : null;
-          })
-          .filter((process): process is PipelineWithIcons => process !== null);
+            // Check scripts if it's a worker
+            if (item.type === "worker") {
+              const worker = item as WorkerWithIcon;
+              return worker.scripts?.some((script) =>
+                (script.name || script.id).toLowerCase().includes(searchTerm)
+              );
+            }
 
-        if (filteredPipelinees.length > 0) {
+            return false;
+          });
+
+          return hasMatchingItems;
+        });
+
+        if (
+          filteredPipelines.length > 0 ||
+          flow.name.toLowerCase().includes(searchTerm)
+        ) {
           return {
             ...flow,
-            pipelines: filteredPipelinees,
+            pipelines: filteredPipelines,
           };
         }
 
-        return flow.name.toLowerCase().includes(filterText.toLowerCase())
-          ? flow
-          : null;
+        return null;
       })
       .filter((flow): flow is FlowWithIcons => flow !== null);
   };
@@ -481,8 +435,8 @@ export default function DataLakeFlowManager() {
     setFilterText(flow.name);
   };
 
-  const handleFilterByPipeline = (process: Pipeline) => {
-    setFilterText(process.name);
+  const handleFilter = (text: string) => {
+    setFilterText(text);
   };
 
   const handleFilterByItem = (item: PipelineItem) => {
@@ -538,9 +492,12 @@ export default function DataLakeFlowManager() {
     setFlows((currentFlows) =>
       updateFlowsWithFiles(currentFlows, datasetId, files)
     );
-  }
+  };
 
-  const updateDatasetFiles = (item: PipelineItemWithIcon, datasetId: string) => {
+  const updateDatasetFiles = (
+    item: PipelineItemWithIcon,
+    datasetId: string
+  ) => {
     if (item.type === "dataset" && item.id === datasetId) {
       const dataset = item as DatasetWithIcon;
       const newShowFiles = !dataset.showFiles;
@@ -568,7 +525,10 @@ export default function DataLakeFlowManager() {
     return item;
   };
 
-  const updateWorkerScripts = (item: PipelineItemWithIcon, workerId: string) => {
+  const updateWorkerScripts = (
+    item: PipelineItemWithIcon,
+    workerId: string
+  ) => {
     if (item.type === "worker" && item.id === workerId) {
       const worker = item as WorkerWithIcon;
       const newShowScripts = !worker.showScripts;
@@ -648,12 +608,12 @@ export default function DataLakeFlowManager() {
 
   const renderDatasetItem = (item: PipelineItemWithIcon) => {
     if (item.type === "worker") {
-      // This is a worker
       const worker = item as WorkerWithIcon;
       const isLoading = loadingScripts[worker.id] || false;
 
       return (
         <TransactionItem
+          key={worker.id} // Add unique key
           worker={worker}
           isLoading={isLoading}
           onToggleScripts={toggleScriptVisibility}
@@ -662,12 +622,12 @@ export default function DataLakeFlowManager() {
       );
     }
 
-    // This is a dataset
     const dataset = item as DatasetWithIcon;
     const isLoading = loadingFiles[dataset.id] || false;
 
     return (
       <DatasetItem
+        key={dataset.id} // Add unique key
         dataset={dataset}
         isLoading={isLoading}
         onToggleFiles={toggleFileVisibility}
@@ -678,206 +638,77 @@ export default function DataLakeFlowManager() {
   };
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto bg-gray-50">
-      <h1 className="text-2xl font-bold mb-4">Data Lake Flow Manager</h1>
-      {isLoading && (
-        <div className="text-center py-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-2">Loading data flows...</p>
-        </div>
-      )}
-
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Error loading data: {error}
-        </div>
-      )}
-      {/* Add search input */}
-      <div className="flex items-center gap-2 bg-white p-2 rounded-lg border shadow-sm">
-        <Search className="h-5 w-5 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search flows, pipelines, datasets..."
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value)}
-          className="flex-1 outline-none border-none bg-transparent"
-        />
-        {filterText && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setFilterText("");
-            }}
-            className="h-6 w-6"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      {/* Add FlowCreationDialog */}
-      <FlowCreationDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        onFlowCreated={() => {
-          // Refresh flows after creation
-          fetchFlows().then((flowsData) => {
-            const flowsWithIcons = flowsData.map((flow) => ({
+    <div className="relative min-h-screen bg-gray-50">
+      <FlowFilter
+        tags={tags}
+        selectedTag={selectedTag}
+        filterText={filterText}
+        onFilterChange={setFilterText}
+        onTagSelect={setSelectedTag}
+        onClearFilters={clearFilters}
+      />
+      <div className="p-4 space-y-2 max-w-7xl mx-auto">
+        {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
+          const flowsInZone = filteredFlows
+            .map((flow) => ({
               ...flow,
-              pipelines: flow.pipelines.map((process) => ({
-                ...process,
-                worker: {
-                  input: process.worker.input.map((item) => ({
-                    ...item,
-                    icon:
-                      item.type === "dataset" ? (
-                        <Database className="text-blue-500" />
-                      ) : (
-                        <Code className="text-green-500" />
-                      ),
-                    showFiles: false,
-                    type: item.type,
-                  })),
-                  output: process.worker.output.map((item) => ({
-                    ...item,
-                    icon: <Database className="text-purple-500" />,
-                    showFiles: false,
-                    type: "dataset",
-                  })),
-                },
-              })),
-            }));
-            setFlows(flowsWithIcons as FlowWithIcons[]);
-          });
-        }}
-      />
+              pipelines: flow.pipelines.filter(
+                (p) => p.zone.toLowerCase() === zone.toLowerCase()
+              ),
+            }))
+            .filter((flow) => flow.pipelines.length > 0);
 
-      {filteredFlows.length === 0 && (
-        <div className="border rounded-lg p-8 text-center bg-white shadow-sm">
-          <p className="text-gray-500 mb-4">
-            No flows match the current filters
-          </p>
-          <Button onClick={clearFilters}>Clear Filters</Button>
-        </div>
-      )}
-      <PipelineCreationDialog
-        isOpen={isPipelineDialogOpen}
-        onClose={() => setIsPipelineDialogOpen(false)}
-        onPipelineCreated={handlePipelineCreated}
-        flowId={selectedFlowId || ""}
-      />
-      <DatasetCreationDialog
-        isOpen={isDatasetDialogOpen}
-        onClose={() => setIsDatasetDialogOpen(false)}
-        onDatasetCreated={handleDatasetCreated}
-        processId={selectedPipelineId || ""}
-      />
-      <WorkerCreationDialog
-        isOpen={isWorkerDialogOpen}
-        onClose={() => setIsWorkerDialogOpen(false)}
-        onWorkerCreated={handleWorkerCreated}
-        processId={selectedPipelineId || ""}
-      />
+          if (flowsInZone.length === 0) return null;
 
-      
-      {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
-        const lowerZone = zone.toLowerCase();
-        const hasPipelinesInZone = filteredFlows.some((flow) =>
-          flow.pipelines.some((process) => process.zone.toLowerCase() === lowerZone)
-        );
-      
-        if (!hasPipelinesInZone) return null;
-      
-        return (
-          <div 
-            key={zone}
-            className="border rounded-lg p-4 bg-white shadow-sm mb-4"
-            style={{ backgroundColor: getZoneColor(lowerZone as Pipeline["zone"]) }}
-          >
-            {/* ... zone header remains same ... */}
-            
-            <div className="space-y-3">
-              {filteredFlows
-                .filter(flow => 
-                  flow.pipelines.some(p => p.zone.toLowerCase() === lowerZone)
-                )
-                .map((flow) => (
-                  <div key={flow.id} className="border rounded-lg p-4 bg-white shadow-sm mb-4">
-                    <div className="mb-3">
-                      <div className="flex justify-between items-center mb-2">
-                        {
-                          flow.pipelines.some(p => p.zone.toLowerCase() === lowerZone)
-                          ? <div className="text-lg font-semibold">{flow.name}</div>
-                          : <div className="text-lg font-semibold">{flow.name}</div>
-                        }
-                      </div>
-                      {flow.pipelines
-                        .filter((process) => process.zone.toLowerCase() === lowerZone)
-                        .map((process) => (
-                          <div key={process.id} className="border rounded-lg p-3 mb-2 bg-white shadow-sm">
-                            {/* ... process header remains same ... */}
-                            
-                            {/* Fix input/output sections rendering */}
-                            <div className="flex flex-row items-center gap-1">
-                              <div className="flex-1">
-                                {/* Input section */}
-                                <div className="flex justify-between items-center mb-1">
-                                  {
-                                    process.worker.input.length === 0
-                                    ? <div className="text-sm text-gray-400">No input</div>
-                                    : <div className="text-sm">Input</div>
-                                  }
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  {process.worker.input.map((item) => (
-                                    <div key={item.id} className="w-full">
-                                      {renderDatasetItem(item as PipelineItemWithIcon)}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center justify-center px-1 text-gray-400">
-                                <div className="text-sm">→</div>
-                              </div>
-                              
-                              <div className="flex-1">
-                                {/* Output section */}
-                                <div className="flex justify-between items-center mb-1">
-                                  {
-                                    process.worker.output.length === 0
-                                   ? <div className="text-sm text-gray-400">No output</div>
-                                    : <div className="text-sm">Output</div>
-                                  }
-                                </div>
-                                <div className="flex flex-col gap-1">
-                                  {process.worker.output.map((item) => (
-                                    <div key={item.id} className="w-full">
-                                      {renderDatasetItem(item as PipelineItemWithIcon)}
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+          return (
+            <ZoneContainer
+              key={zone}
+              zone={zone}
+              pipelines={flowsInZone.flatMap((f) => f.pipelines)}
+            >
+              {flowsInZone.map((flow) => (
+                <div
+                  key={flow.id}
+                  className="mb-2 bg-white p-1 rounded-lg shadow-sm"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-2 py-1">
+                      <h3 className="text-base font-medium text-gray-800">
+                        {flow.name}
+                      </h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 py-1"
+                        onClick={() => handleFilterByFlow(flow)}
+                      >
+                        <Search className="h-4 w-4" />
+                      </Button>
                     </div>
+                    {flow.pipelines.map((pipeline) => (
+                      <PipelineComponent
+                        key={pipeline.id}
+                        pipeline={pipeline as PipelineWithIcons}
+                        isExpanded={selectedPipelineId === pipeline.id}
+                        onToggle={() =>
+                          setSelectedPipelineId((prev) =>
+                            prev === pipeline.id ? null : pipeline.id
+                          )
+                        }
+                        onFilter={() => handleFilter(pipeline.id)}
+                        onToggleFiles={toggleFileVisibility}
+                        onToggleScripts={toggleScriptVisibility}
+                      />
+                    ))}
                   </div>
-                ))}
-            </div>
-          </div>
-        );
-      })}
+                </div>
+              ))}
+            </ZoneContainer>
+          );
+        })}
+
+        {/* Dialog components remain unchanged */}
+      </div>
     </div>
   );
 }
-
-// Remove the existing type definitions and replace with:
-import type {
-  DatasetWithIcon,
-  WorkerWithIcon,
-  PipelineItemWithIcon,
-  PipelineWithIcons,
-  FlowWithIcons
-} from "./types";

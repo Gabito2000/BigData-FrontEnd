@@ -1,6 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, File as FileIcon, Search } from "lucide-react";
-import { File, Worker } from "@/lib/api";
+// Update the lucide-react import
+import { ChevronDown, ChevronRight, File as FileIcon, Search, Code } from "lucide-react";
+import { File, Worker } from "@/lib/types";
+import { Script } from "vm";
 
 type WorkerWithIcon = Worker & { 
     icon: React.ReactNode;
@@ -17,7 +19,6 @@ interface TransactionItemProps {
 
 export function TransactionItem({ worker, isLoading, onToggleScripts, onSearch }: TransactionItemProps) {
   const SearchButton = ({ 
-    text, 
     size = "icon", 
     className = "h-4 w-4 p-0 ml-auto", 
     iconSize = "h-3 w-3",
@@ -47,6 +48,7 @@ export function TransactionItem({ worker, isLoading, onToggleScripts, onSearch }
   return (
     <div key={worker.id} className="flex flex-col w-full">
       <div className="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded border border-gray-200">
+        <Code/>
         <Button
           variant="ghost"
           size="icon"
@@ -59,7 +61,9 @@ export function TransactionItem({ worker, isLoading, onToggleScripts, onSearch }
             <ChevronRight className="h-3 w-3" />
           )}
         </Button>
-        <div className="flex-shrink-0">{worker.icon}</div>
+        <FileIcon className="h-4 w-4 text-green-500" /> 
+        
+        
         <span className="text-sm truncate">{worker.name}</span>
         <SearchButton
           text={worker.name}
