@@ -318,3 +318,13 @@ export async function associateFileToDataset(fileId: string, datasetId: string) 
   }
   return response.json();
 }
+
+export async function executePipeline(pipelineId: string): Promise<void> {
+  const response = await fetch(`/api/pipelines/${pipelineId}/execute`, {
+    method: 'POST',
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to execute pipeline');
+  }
+}

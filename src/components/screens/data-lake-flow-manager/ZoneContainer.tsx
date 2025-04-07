@@ -7,12 +7,15 @@ interface ZoneContainerProps {
 }
 
 export function ZoneContainer({ zone, pipelines, children }: ZoneContainerProps) {
+  // Update the zoneColor function
   const zoneColor = (zone: string) => {
     switch (zone.toLowerCase()) {
       case "landing": return "rgba(173, 216, 230, 0.3)";
       case "raw": return "rgba(255, 228, 196, 0.3)";
       case "trusted": return "rgba(255, 182, 193, 0.3)";
       case "refined": return "rgba(144, 238, 144, 0.3)";
+      case "sandbox": return "rgba(221, 160, 221, 0.3)";
+      case "archival": return "rgba(169, 169, 169, 0.3)";
       default: return "rgba(255, 255, 255, 0.3)";
     }
   };

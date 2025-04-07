@@ -389,7 +389,7 @@ const PageContent = ({
     <h1 className="text-2xl font-bold mb-4 text-foreground">{title}</h1>
     <p className="text-muted-foreground">Content for {title}</p>
     <Separator />
-    <div className="mt-4">{component && React.createElement(component)}</div>
+    <div className="m-1">{component && React.createElement(component)}</div>
   </div>
 );
 

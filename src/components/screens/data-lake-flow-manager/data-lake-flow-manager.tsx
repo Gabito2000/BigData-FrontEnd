@@ -1,6 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Code, Database, Search } from "lucide-react";
+import {
+  Code,
+  Database,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  X,
+  Archive,
+  Box,
+} from "lucide-react";
 import {
   fetchFlows,
   fetchTags,
@@ -8,20 +18,7 @@ import {
   fetchFilesByDataset,
   fetchScriptsByWorker,
 } from "@/lib/api";
-import {
-  Flow,
-  Pipeline,
-  PipelineItem,
-  Dataset,
-  Worker,
-  File,
-} from "@/lib/types";
-import { DatasetItem } from "@/components/screens/data-lake-flow-manager/dataset-item";
-import { TransactionItem } from "@/components/screens/data-lake-flow-manager/transaction-item";
-import { FlowCreationDialog } from "./dialogs/flow-creation-dialog";
-import { PipelineCreationDialog } from "./dialogs/pipeline-creation-dialog";
-import { WorkerCreationDialog } from "./dialogs/worker-creation-dialog";
-import { DatasetCreationDialog } from "./dialogs/dataset-creation-dialog";
+import { Flow, Pipeline, Dataset, Worker, File } from "@/lib/types";
 
 // Extended types with icon property
 type DatasetWithIcon = Dataset & {
@@ -37,7 +34,9 @@ type WorkerWithIcon = Worker & {
 type PipelineItemWithIcon = DatasetWithIcon | WorkerWithIcon;
 
 // Extended flow types
+// Add to your PipelineWithIcons type:
 type PipelineWithIcons = Omit<Pipeline, "worker"> & {
+  isExecuting?: boolean;
   worker: {
     input: PipelineItemWithIcon[];
     output: PipelineItemWithIcon[];
@@ -52,142 +51,43 @@ type FlowWithIcons = Omit<Flow, "pipelines"> & {
 import { FlowFilter } from "@/components/screens/data-lake-flow-manager/FlowFilter";
 import { ZoneContainer } from "@/components/screens/data-lake-flow-manager/ZoneContainer";
 import { PipelineComponent } from "@/components/screens/data-lake-flow-manager/PipelineComponent";
+import { WorkerCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/worker-creation-dialog";
+import { DatasetCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/dataset-creation-dialog";
+import { FileCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/file-creation-dialog";
+import { TransformCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/transform-creation-dialog";
+import { executePipeline } from "@/lib/api"; // Add this import
+import { pipeline } from "stream";
 
 export default function DataLakeFlowManager() {
-  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
-  const [isDatasetDialogOpen, setIsDatasetDialogOpen] = useState(false);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(
     null
   );
+  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
+  const [isDatasetDialogOpen, setIsDatasetDialogOpen] = useState(false);
+  const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
+  const [isTransformDialogOpen, setIsTransformDialogOpen] = useState(false);
+  const [loadingScripts, setLoadingScripts] = useState<Record<string, boolean>>(
+    {}
+  );
 
-  // Add handler for dataset creation
-  // Update the handleDatasetCreated function
-  const handleDatasetCreated = async () => {
-    try {
-      const flowsData = await fetchFlows();
-      const flowsWithIcons = flowsData.map((flow) => ({
-        ...flow,
-        pipelines: flow.pipelines.map((process) => ({
-          ...process,
-          worker: {
-            input: process.worker.input.map((item) => ({
-              ...item,
-              icon:
-                item.type === "dataset" ? (
-                  <Database className="text-blue-500" />
-                ) : (
-                  <Code className="text-green-500" />
-                ),
-              showFiles: false,
-              showScripts: false,
-              type: item.type,
-            })),
-            output: process.worker.output.map((item) => ({
-              ...item,
-              icon: <Database className="text-purple-500" />,
-              showFiles: false,
-              type: "dataset",
-            })),
-          },
-        })),
-      }));
-      setFlows(flowsWithIcons as FlowWithIcons[]);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
-      );
-    }
-  };
-  const [isPipelineDialogOpen, setIsPipelineDialogOpen] = useState(false);
-  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
-
-  const handlePipelineCreated = () => {
-    fetchFlows()
-      .then((flowsData) => {
-        const flowsWithIcons = flowsData.map((flow) => ({
-          ...flow,
-          pipelines: flow.pipelines.map((process) => ({
-            ...process,
-            worker: {
-              input: process.worker.input.map((item) => ({
-                ...item,
-                icon:
-                  item.type === "dataset" ? (
-                    <Database className="text-blue-500" />
-                  ) : (
-                    <Code className="text-green-500" />
-                  ),
-                showFiles: false,
-                showScripts: false,
-              })),
-              output: process.worker.output.map((item) => ({
-                ...item,
-                icon: <Database className="text-purple-500" />,
-                showFiles: false,
-              })),
-            },
-          })),
-        }));
-        setFlows(flowsWithIcons);
-      })
-      .catch((err) => {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-      });
-  };
-  const handleWorkerCreated = async () => {
-    try {
-      const flowsData = await fetchFlows();
-      const flowsWithIcons = flowsData.map((flow) => ({
-        ...flow,
-        pipelines: flow.pipelines.map((process) => ({
-          ...process,
-          worker: {
-            input: process.worker.input.map((item) => ({
-              ...item,
-              icon:
-                item.type === "dataset" ? (
-                  <Database className="text-blue-500" />
-                ) : (
-                  <Code className="text-green-500" />
-                ),
-              showFiles: false,
-              showScripts: false,
-              type: item.type,
-            })),
-            output: process.worker.output.map((item) => ({
-              ...item,
-              icon: <Database className="text-purple-500" />,
-              showFiles: false,
-              type: "dataset",
-            })),
-          },
-        })),
-      }));
-      setFlows(flowsWithIcons as FlowWithIcons[]);
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "An unknown error occurred"
-      );
-    }
-  };
   const [flows, setFlows] = useState<FlowWithIcons[]>([]);
   const [tags, setTags] = useState<{ id: string; count?: number }[]>([]);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filterText, setFilterText] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [loadingFiles, setLoadingFiles] = useState<Record<string, boolean>>({});
-  const [loadingScripts, setLoadingScripts] = useState<Record<string, boolean>>(
-    {}
+
+  // Add near the other state declarations
+  const [isSandboxVisible, setIsSandboxVisible] = useState(true);
+  const [isArchivalVisible, setIsArchivalVisible] = useState(false);
+
+  // Add these new state variables for managing selected IDs
+  const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+  const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(
+    null
   );
 
   // Fetch flows and tags on component mount
   useEffect(() => {
     const loadData = async () => {
-      setIsLoading(true);
       try {
         const [flowsData, tagsData] = await Promise.all([
           fetchFlows(),
@@ -233,12 +133,7 @@ export default function DataLakeFlowManager() {
         setFlows(flowsWithIcons as FlowWithIcons[]);
         setTags(tagsData);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
         console.error("Error loading data:", err);
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -249,7 +144,6 @@ export default function DataLakeFlowManager() {
   useEffect(() => {
     if (selectedTag) {
       const loadTaggedElements = async () => {
-        setIsLoading(true);
         try {
           const elements = await fetchElementsByTag(selectedTag);
 
@@ -278,21 +172,14 @@ export default function DataLakeFlowManager() {
             );
           }
         } catch (err) {
-          setError(
-            err instanceof Error ? err.message : "An unknown error occurred"
-          );
           console.error("Error loading tagged elements:", err);
-        } finally {
-          setIsLoading(false);
         }
       };
 
       loadTaggedElements();
     } else {
-      // If no tag is selected, reload all flows
       fetchFlows()
         .then((flowsData) => {
-          // Add icons to the datasets and workers
           const flowsWithIcons = flowsData.map((flow) => ({
             ...flow,
             pipelines: flow.pipelines.map((process) => ({
@@ -331,41 +218,10 @@ export default function DataLakeFlowManager() {
           setFlows(flowsWithIcons as FlowWithIcons[]);
         })
         .catch((err) => {
-          setError(
-            err instanceof Error ? err.message : "An unknown error occurred"
-          );
           console.error("Error reloading flows:", err);
         });
     }
   }, [selectedTag]);
-
-  const SearchButton = ({
-    text,
-    size = "icon",
-    className = "h-4 w-4 p-0 ml-auto",
-    iconSize = "h-3 w-3",
-    onClick,
-  }: {
-    text: string;
-    size?: "default" | "sm" | "lg" | "icon";
-    className?: string;
-    iconSize?: string;
-    onClick: (e: React.MouseEvent) => void;
-  }) => {
-    return (
-      <Button
-        variant="ghost"
-        size={size}
-        className={className}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(e);
-        }}
-      >
-        <Search className={iconSize} />
-      </Button>
-    );
-  };
 
   const filterFlows = (flows: FlowWithIcons[], filterText: string) => {
     if (!filterText) return flows;
@@ -439,10 +295,6 @@ export default function DataLakeFlowManager() {
     setFilterText(text);
   };
 
-  const handleFilterByItem = (item: PipelineItem) => {
-    setFilterText(item.name);
-  };
-
   const clearFilters = () => {
     setSelectedTag(null);
     setFilterText("");
@@ -486,14 +338,6 @@ export default function DataLakeFlowManager() {
     });
   };
 
-  const reloadDatasetFiles = async (datasetId: string) => {
-    // add dataset files to dataset
-    const files = await fetchFilesByDataset(datasetId);
-    setFlows((currentFlows) =>
-      updateFlowsWithFiles(currentFlows, datasetId, files)
-    );
-  };
-
   const updateDatasetFiles = (
     item: PipelineItemWithIcon,
     datasetId: string
@@ -503,17 +347,14 @@ export default function DataLakeFlowManager() {
       const newShowFiles = !dataset.showFiles;
 
       if (newShowFiles && (!dataset.files || dataset.files.length === 0)) {
-        setLoadingFiles((prev) => ({ ...prev, [datasetId]: true }));
         fetchFilesByDataset(datasetId)
           .then((files) => {
             setFlows((currentFlows) =>
               updateFlowsWithFiles(currentFlows, datasetId, files)
             );
-            setLoadingFiles((prev) => ({ ...prev, [datasetId]: false }));
           })
           .catch((err) => {
             console.error("Error fetching files:", err);
-            setLoadingFiles((prev) => ({ ...prev, [datasetId]: false }));
           });
       }
 
@@ -606,37 +447,175 @@ export default function DataLakeFlowManager() {
     }));
   };
 
-  const renderDatasetItem = (item: PipelineItemWithIcon) => {
-    if (item.type === "worker") {
-      const worker = item as WorkerWithIcon;
-      const isLoading = loadingScripts[worker.id] || false;
+  // Fix the refreshFlowsWithIcons function
+  const refreshFlowsWithIcons = (flowsData: Flow[]) => {
+    return flowsData.map((flow) => ({
+      ...flow,
+      pipelines: flow.pipelines.map((process) => ({
+        ...process,
+        worker: {
+          input: process.worker.input.map((item) => {
+            if (item.type === "dataset") {
+              return {
+                ...item,
+                icon: <Database className="text-blue-500" />,
+                showFiles: false,
+                type: "dataset",
+              };
+            } else {
+              return {
+                ...item,
+                icon: <Code className="text-green-500" />,
+                showScripts: false,
+                type: "worker",
+              };
+            }
+          }),
+          output: process.worker.output.map((item) => ({
+            ...item,
+            icon: <Database className="text-purple-500" />,
+            showFiles: false,
+            type: "dataset",
+          })),
+        },
+      })),
+    }));
+  };
 
-      return (
-        <TransactionItem
-          key={worker.id} // Add unique key
-          worker={worker}
-          isLoading={isLoading}
-          onToggleScripts={toggleScriptVisibility}
-          onSearch={setFilterText}
-        />
+  // Fix handler functions
+  const handleWorkerCreated = () => {
+    fetchFlows().then((flowsData) => {
+      const flowsWithIcons = refreshFlowsWithIcons(flowsData);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
+    });
+  };
+
+  const handleDatasetCreated = () => {
+    fetchFlows().then((flowsData) => {
+      const flowsWithIcons = refreshFlowsWithIcons(flowsData);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
+    });
+  };
+
+  const handleFileCreated = () => {
+    fetchFlows().then((flowsData) => {
+      const flowsWithIcons = refreshFlowsWithIcons(flowsData);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
+    });
+  };
+
+  const handleTransformCreated = () => {
+    fetchFlows().then((flowsData) => {
+      const flowsWithIcons = refreshFlowsWithIcons(flowsData);
+      setFlows(flowsWithIcons as FlowWithIcons[]);
+    });
+  };
+
+  // Function to render the Zone Toggle Button
+  const ZoneToggleButton = ({
+    isVisible,
+    setIsVisible,
+    zoneName,
+  }: {
+    isVisible: boolean;
+    setIsVisible: (value: boolean) => void;
+    zoneName: string;
+  }) => {
+    const icon =
+      zoneName === "Archival" ? (
+        <Archive className="h-4 w-4" />
+      ) : (
+        <Box className="h-4 w-4" />
       );
-    }
-
-    const dataset = item as DatasetWithIcon;
-    const isLoading = loadingFiles[dataset.id] || false;
 
     return (
-      <DatasetItem
-        key={dataset.id} // Add unique key
-        dataset={dataset}
-        isLoading={isLoading}
-        onToggleFiles={toggleFileVisibility}
-        onSearch={setFilterText}
-        reloadDatasetFiles={reloadDatasetFiles}
-      />
+      <Button
+        variant={isVisible ? "default" : "outline"}
+        className="flex items-center gap-2 transition-all duration-200"
+        onClick={() => setIsVisible(!isVisible)}
+      >
+        {icon}
+        <span>{zoneName} Zone</span>
+        {isVisible ? (
+          <ChevronUp className="h-4 w-4" />
+        ) : (
+          <ChevronDown className="h-4 w-4" />
+        )}
+      </Button>
     );
   };
 
+  const handleExecutePipeline = async (
+    flows: Flow[],
+    flowId: string,
+    pipelineId: string
+  ) => {
+    console.log("Executing pipeline:", pipelineId);
+    try {
+      const flow = flows.find((f) => f.id === flowId);
+      if (!flow) return;
+
+      const zonesInOrder = ["landing", "raw", "trusted", "refined"];
+      const lastZone = flow.pipelines.find((p) => p.id === pipelineId)?.zone;
+      if (!lastZone) return;
+
+      console.log("Last zone:", lastZone);
+      
+      const zonesToExecute = zonesInOrder.slice(
+        0,
+        zonesInOrder.indexOf(lastZone) + 1
+      );
+
+      console.log("Zones to execute:", zonesToExecute);
+
+      const pipelinesInZone = flow.pipelines.filter((p) =>
+        zonesToExecute.includes(p.zone)
+      );
+
+      for (const pipeline of pipelinesInZone) {
+        console.log("Executing pipeline:", pipeline.id);
+      }
+
+      await setFlows((prevFlows) => 
+        prevFlows.map((f) => ({
+          ...f,
+          pipelines: f.pipelines.map((p) => ({
+            ...p,
+            isExecuting: pipelinesInZone.some(pip => pip.id === p.id)
+          }))
+        }))
+      )
+
+      // Execute pipelines in sequence
+      while (pipelinesInZone.length >= 0) {
+        //TODO CHANGE TO REAL CODE NOT A MOCK
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const pipeline = pipelinesInZone.pop();
+        if (!pipeline) break;
+        await setFlows((prevFlows) => 
+          prevFlows.map((f) => ({
+            ...f,
+            pipelines: f.pipelines.map((p) => ({
+              ...p,
+              isExecuting: f.id === flowId && p.id !== pipeline.id && pipelinesInZone.some(pip => pip.id === p.id)
+            }))
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error executing pipeline:", error);
+      // Reset executing state on error
+      setFlows((prevFlows) => 
+        prevFlows.map((f) => ({
+          ...f,
+          pipelines: f.pipelines.map((p) => ({
+            ...p,
+            isExecuting: false
+          }))
+        }))
+      );
+    }
+  };
   return (
     <div className="relative min-h-screen bg-gray-50">
       <FlowFilter
@@ -646,69 +625,205 @@ export default function DataLakeFlowManager() {
         onFilterChange={setFilterText}
         onTagSelect={setSelectedTag}
         onClearFilters={clearFilters}
+        className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm p-4"
       />
-      <div className="p-4 space-y-2 max-w-7xl mx-auto">
-        {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
-          const flowsInZone = filteredFlows
-            .map((flow) => ({
-              ...flow,
-              pipelines: flow.pipelines.filter(
-                (p) => p.zone.toLowerCase() === zone.toLowerCase()
-              ),
-            }))
-            .filter((flow) => flow.pipelines.length > 0);
 
-          if (flowsInZone.length === 0) return null;
+      {/* Active filters indication */}
+      {(selectedTag || filterText) && (
+        <div className="bg-blue-50 px-4 py-2 flex items-center gap-2">
+          <Filter className="h-4 w-4 text-blue-500" />
+          <span className="text-sm text-blue-700">Active filters:</span>
+          {selectedTag && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+              Tag: {selectedTag}
+              <button
+                onClick={() => setSelectedTag(null)}
+                className="ml-1 hover:bg-blue-200 rounded-full p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+          {filterText && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+              Search: {filterText}
+              <button
+                onClick={() => setFilterText("")}
+                className="ml-1 hover:bg-blue-200 rounded-full p-1"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
 
-          return (
-            <ZoneContainer
-              key={zone}
-              zone={zone}
-              pipelines={flowsInZone.flatMap((f) => f.pipelines)}
-            >
-              {flowsInZone.map((flow) => (
-                <div
-                  key={flow.id}
-                  className="mb-2 bg-white p-1 rounded-lg shadow-sm"
+      <div className="p-6 mx-auto">
+        {/* Zone toggle buttons - improved layout */}
+        <div className="flex gap-4 mb-6">
+          <ZoneToggleButton
+            isVisible={isArchivalVisible}
+            setIsVisible={setIsArchivalVisible}
+            zoneName="Archival"
+          />
+          <ZoneToggleButton
+            isVisible={isSandboxVisible}
+            setIsVisible={setIsSandboxVisible}
+            zoneName="Sandbox"
+          />
+        </div>
+
+        <div className="flex gap-6">
+          {/* Left sidebar - Archival Zone */}
+          {isArchivalVisible && (
+            <div className="w-1/4 min-w-[250px] flex-shrink-0">
+              <div className="bg-white rounded-lg shadow p-4 h-full">
+                <ZoneContainer
+                  zone="Archival"
+                  pipelines={[]}
+                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Main content area */}
+          <div className={`w-full`}>
+            {["Landing", "Raw", "Trusted", "Refined"].map((zone) => {
+              const flowsInZone = filteredFlows
+                .map((flow) => ({
+                  ...flow,
+                  pipelines: flow.pipelines.filter(
+                    (p) => p.zone.toLowerCase() === zone.toLowerCase()
+                  ),
+                }))
+                .filter((flow) => flow.pipelines.length > 0);
+
+              if (flowsInZone.length === 0) return null;
+
+              return (
+                <ZoneContainer
+                  key={zone}
+                  zone={zone}
+                  pipelines={flowsInZone.flatMap((f) => f.pipelines)}
+                  className="bg-white rounded-lg shadow p-4"
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between px-2 py-1">
-                      <h3 className="text-base font-medium text-gray-800">
-                        {flow.name}
-                      </h3>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 py-1"
-                        onClick={() => handleFilterByFlow(flow)}
-                      >
-                        <Search className="h-4 w-4" />
-                      </Button>
+                  {flowsInZone.map((flow) => (
+                    <div key={flow.id} className="mb-6 last:mb-0">
+                      <div className="space-y-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                        <div className="flex items-center justify-between p-3">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {flow.name}
+                          </h3>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="hover:bg-gray-200"
+                              onClick={() => sendFlowToArchival(flow)}
+                            >
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="hover:bg-gray-200"
+                              onClick={() => handleFilterByFlow(flow)}
+                            >
+                              <Search className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        {flow.pipelines.map((pipeline) => (
+                          <PipelineComponent
+                            style={{
+                              marginLeft: "10px",
+                            }}
+                            key={pipeline.id}
+                            isExecuting={(pipeline as any)?.isExecuting || false}
+                            pipeline={pipeline as PipelineWithIcons}
+                            isExpanded={selectedPipelineId === pipeline.id}
+                            onToggle={() =>
+                              setSelectedPipelineId((prev) =>
+                                prev === pipeline.id ? null : pipeline.id
+                              )
+                            }
+                            onFilter={handleFilter}
+                            onToggleFiles={toggleFileVisibility}
+                            onToggleScripts={toggleScriptVisibility}
+                            onAddWorker={() => {
+                              setSelectedPipelineId(pipeline.id);
+                              setIsWorkerDialogOpen(true);
+                            }}
+                            onAddDataset={() => {
+                              setSelectedPipelineId(pipeline.id);
+                              setIsDatasetDialogOpen(true);
+                            }}
+                            onAddFile={() => {
+                              setSelectedPipelineId(pipeline.id);
+                              setIsFileDialogOpen(true);
+                            }}
+                            onAddTransform={() => {
+                              setSelectedPipelineId(pipeline.id);
+                              setIsTransformDialogOpen(true);
+                            }}
+                            onExecutePipeline={() =>
+                              handleExecutePipeline(flows, flow.id, pipeline.id)
+                            }
+                            className="bg-white border border-gray-200 rounded-lg hover:border-blue-300 transition-colors shadow-sm hover:shadow"
+                          />
+                        ))}
+                      </div>
                     </div>
-                    {flow.pipelines.map((pipeline) => (
-                      <PipelineComponent
-                        key={pipeline.id}
-                        pipeline={pipeline as PipelineWithIcons}
-                        isExpanded={selectedPipelineId === pipeline.id}
-                        onToggle={() =>
-                          setSelectedPipelineId((prev) =>
-                            prev === pipeline.id ? null : pipeline.id
-                          )
-                        }
-                        onFilter={() => handleFilter(pipeline.id)}
-                        onToggleFiles={toggleFileVisibility}
-                        onToggleScripts={toggleScriptVisibility}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </ZoneContainer>
-          );
-        })}
+                  ))}
+                </ZoneContainer>
+              );
+            })}
+          </div>
 
-        {/* Dialog components remain unchanged */}
+          {/* Right sidebar - Sandbox Zone */}
+          {isSandboxVisible && (
+            <div className="w-1/4 min-w-[250px] flex-shrink-0">
+              <div className="bg-white rounded-lg shadow p-4 h-full">
+                <ZoneContainer
+                  zone="Sandbox"
+                  pipelines={[]}
+                  className="bg-gray-50 rounded-lg p-3 border border-gray-200"
+                />
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Dialogs */}
+      <WorkerCreationDialog
+        isOpen={isWorkerDialogOpen}
+        onClose={() => setIsWorkerDialogOpen(false)}
+        onWorkerCreated={handleWorkerCreated}
+        pipelineId={selectedPipelineId || ""}
+      />
+
+      <DatasetCreationDialog
+        isOpen={isDatasetDialogOpen}
+        onClose={() => setIsDatasetDialogOpen(false)}
+        onDatasetCreated={handleDatasetCreated}
+        pipelineId={selectedPipelineId || ""}
+      />
+
+      <FileCreationDialog
+        isOpen={isFileDialogOpen}
+        onClose={() => setIsFileDialogOpen(false)}
+        onFileCreated={handleFileCreated}
+        datasetId={selectedDatasetId || ""}
+      />
+
+      <TransformCreationDialog
+        isOpen={isTransformDialogOpen}
+        onClose={() => setIsTransformDialogOpen(false)}
+        onTransformCreated={handleTransformCreated}
+        workerId={selectedPipelineId || ""}
+      />
     </div>
   );
 }

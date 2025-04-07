@@ -4,16 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createDataset, fetchFlows, associateDatasetWithPipeline } from "@/lib/api";
-import { v4 as uuidv4 } from 'uuid';
 
 interface DatasetCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onDatasetCreated: () => void;
-  processId: string;
+  pipelineId: string;
 }
 
-export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, processId }: DatasetCreationDialogProps) {
+export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, pipelineId }: DatasetCreationDialogProps) {
   const [id, setId] = useState("");
   const [isNewDataset, setIsNewDataset] = useState(true);
   const [existingDatasetId, setExistingDatasetId] = useState("");
@@ -56,13 +55,13 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, proce
         await createDataset({
           id,
           name: id,
-          process_id: processId,
+          process_id: pipelineId,
           sourceUrl: sourceUrl || undefined,
           is_input: isInput
         });
       } else {
         // Here you would add logic to associate existing dataset
-        await associateDatasetWithPipeline(existingDatasetId, processId, isInput);
+        await associateDatasetWithPipeline(existingDatasetId, pipelineId, isInput);
       }
       
       onDatasetCreated();
