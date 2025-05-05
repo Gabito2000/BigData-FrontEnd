@@ -44,8 +44,10 @@ import UserPermissions from "@/components/screens/user-permissions/user-permissi
 import { FullScreenServerAdminDashboardComponent } from "@/components/screens/server-admin-dashboard/full-screen-server-admin-dashboard";
 import { WindowsStyleFileViewer } from "@/components/screens/server-admin-dashboard/windows-style-file-viewer";
 
+
 // Keep other existing imports
 import { FileSystemItemHandler } from "@/lib/types";
+import { FileViewer } from "@/components/screens/file-viewer/FileViewer";
 // import WasmTerminalComponent from "@/components/wasm-terminal-component";
 
 export type FileSystemItem = {
@@ -71,6 +73,7 @@ const menuItems = [
     icon: FileText,
     label: "Vista de archivos",
     path: "/archivos",
+    component: FileViewer
   },
   {
     icon: Database,

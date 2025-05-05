@@ -198,20 +198,28 @@ export const WindowsStyleFileViewer: React.FC<WindowsStyleFileViewerProps> = ({
                       className="cursor-pointer hover:bg-gray-100"
                       onClick={() => handleFileClick(item)}
                     >
-                      <TableCell className="flex items-center">
-                        {item.type === "folder" ? (
-                          <Folder className="w-4 h-4 mr-2" />
-                        ) : (
-                          <File className="w-4 h-4 mr-2" />
-                        )}
-                        {item.name}
-                      </TableCell>
-                      <TableCell>
-                        {item.type === "folder" ? "Carpeta" : "Archivo"}
-                      </TableCell>
+                      <TableCell>{item.name}</TableCell>
+                      <TableCell>{item.type}</TableCell>
                       <TableCell>{formatFileSize(item.size)}</TableCell>
                       <TableCell>
-                        {item.modifiedDate.toLocaleDateString()}
+                        {item.modifiedDate
+                          ? new Date(item.modifiedDate).toLocaleString()
+                          : ""}
+                      </TableCell>
+                      <TableCell>
+                        {item.type === "file" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Replace with your actual download URL logic
+                              window.open(`/api/download?path=${encodeURIComponent(item.name)}`, "_blank");
+                            }}
+                          >
+                            Download
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

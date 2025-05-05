@@ -92,7 +92,15 @@ export function DatasetComponent({
               <div key={file.id} className="flex items-center p-3 border rounded bg-gray-50">
                 <FileIcon className="text-blue-400 mr-2" />
                 <div className="flex flex-col flex-1">
-                  <span className="font-semibold">{file.filePath || file.id}</span>
+                  <a
+                    href={`/archivos?file=${encodeURIComponent(file.filePath || "")}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-semibold text-blue-600 hover:underline"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {file.filePath || file.id}
+                  </a>
                   <span className="text-xs text-gray-500">{file.fileType}</span>
                 </div>
                 <div className="flex gap-2">

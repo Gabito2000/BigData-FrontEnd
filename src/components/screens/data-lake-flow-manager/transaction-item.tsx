@@ -82,7 +82,15 @@ export function TransactionItem({ worker, isLoading, onToggleScripts, onSearch }
             worker.scripts.map(script => (
               <div key={script.id} className="flex items-center space-x-1 bg-white px-2 py-0.5 rounded border border-gray-100 text-xs">
                 <FileIcon className="h-3 w-3 text-green-500 flex-shrink-0" />
-                <span className="truncate">{script.name || script.id}</span>
+                <a
+                  href={`/archivos?file=${encodeURIComponent(script.filePath || script.name || script.id)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="truncate text-blue-600 hover:underline font-semibold"
+                  onClick={e => e.stopPropagation()}
+                >
+                  {script.name || script.id}
+                </a>
                 {script.fileType && (
                   <span className="text-gray-500 text-xs">({script.fileType})</span>
                 )}
