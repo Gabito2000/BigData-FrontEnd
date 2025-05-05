@@ -18,7 +18,7 @@ interface PipelineComponentProps {
   onAddDataset: () => void;
   onAddWorker: () => void;
   onAddTransform: () => void;
-  onAddFile: () => void;
+  onAddFile: (datasetId: string) => void;
   onSendToSandbox: (text: string) => void;
   onExecutePipeline: (pipelineId: string) => void;  // Add this line
   isExecuting?: boolean;
@@ -110,7 +110,7 @@ export function PipelineComponent({
                     dataset={item}
                     onToggleFiles={onToggleFiles}
                     onFilter={onFilter}
-                    onAddFile={onAddFile}
+                    onAddFile={() => onAddFile(item.id)}
                     onSendFileToSandbox={onSendToSandbox}
                   />
                 ) : (
@@ -139,6 +139,7 @@ export function PipelineComponent({
                     dataset={item}
                     onToggleFiles={onToggleFiles}
                     onFilter={onFilter}
+                    onAddFile={() => onAddFile(item.id)}
                     onSendFileToSandbox={onSendToSandbox}
                   />
                 ) : (

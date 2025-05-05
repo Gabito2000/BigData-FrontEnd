@@ -11,15 +11,21 @@ interface FileCreationDialogProps {
   onClose: () => void;
   onFileCreated: () => void;
   datasetId: string;
+  datasetZone: string; // Add dataset zone prop
 }
 
-export function FileCreationDialog({ isOpen, onClose, onFileCreated, datasetId }: FileCreationDialogProps) {
+export function FileCreationDialog({ 
+  isOpen, 
+  onClose, 
+  onFileCreated, 
+  datasetId,
+  datasetZone // Destructure new prop
+}: FileCreationDialogProps) {
   const [id, setId] = useState("");
   const [filePath, setFilePath] = useState("");
   const [fileType, setFileType] = useState("structured");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [isExistingFile, setIsExistingFile] = useState(false);
   const [existingFileId, setExistingFileId] = useState("");
   const [availableFiles, setAvailableFiles] = useState<{id: string, name: string}[]>([]);
@@ -29,8 +35,14 @@ export function FileCreationDialog({ isOpen, onClose, onFileCreated, datasetId }
       fetchAllFiles().then(files => {
         setAvailableFiles(files);
       });
+      checkAndSetExistingFile();
     }
   }, [isOpen]);
+
+  const checkAndSetExistingFile = () => {
+    const isLandingZone = datasetZone.toLowerCase() === 'landing';
+    setIsExistingFile(!isLandingZone);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,18 +54,20 @@ export function FileCreationDialog({ isOpen, onClose, onFileCreated, datasetId }
       if (isExistingFile) {
         result = await associateFileToDataset(existingFileId, datasetId);
       } else {
+        if (datasetZone.toLowerCase() !== 'landing') {
+          throw new Error('New files can only be created in Landing zone');
+        }
+        
         result = await createFile({
           id,
           dataset_id: datasetId,
           fileType: fileType.toLowerCase(),
-          file_path: filePath || undefined
+          file_path: filePath || undefined,
         });
       }
       
-      // Pass the created/associated file data to the parent component
       onFileCreated();
       onClose();
-      // Reset form
       setId("");
       setFilePath("");
       setFileType("structured");
@@ -69,31 +83,37 @@ export function FileCreationDialog({ isOpen, onClose, onFileCreated, datasetId }
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add File to Dataset</DialogTitle>
+          <DialogTitle>Add File to Dataset: {datasetId}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">File Type</label>
-              <div className="flex space-x-4">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    checked={!isExistingFile}
-                    onChange={() => setIsExistingFile(false)}
-                  />
-                  <span>New File</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    checked={isExistingFile}
-                    onChange={() => setIsExistingFile(true)}
-                  />
-                  <span>Existing File</span>
-                </label>
+            {datasetZone.toLowerCase() === 'landing' ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium">File Type</label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      checked={!isExistingFile}
+                      onChange={() => setIsExistingFile(false)}
+                    />
+                    <span>New File</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      checked={isExistingFile}
+                      onChange={() => setIsExistingFile(true)}
+                    />
+                    <span>Existing File</span>
+                  </label>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-sm text-gray-500">
+                Only existing files can be added to {datasetZone} zone
+              </div>
+            )}
 
             {isExistingFile ? (
               <div className="space-y-2">
@@ -144,7 +164,10 @@ export function FileCreationDialog({ isOpen, onClose, onFileCreated, datasetId }
                   <label htmlFor="fileType" className="text-sm font-medium">
                     File Type
                   </label>
-                  <Select value={fileType} onValueChange={setFileType}>
+                  <Select 
+                    value={fileType} 
+                    onValueChange={setFileType}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select file type" />
                     </SelectTrigger>

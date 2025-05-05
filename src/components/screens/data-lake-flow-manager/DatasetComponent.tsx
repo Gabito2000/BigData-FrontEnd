@@ -135,7 +135,7 @@ export function DatasetItem({
         onFileCreated={() => {
           setShowFileDialog(false);
           onToggleFiles(dataset.id);
-          reloadDatasetFiles(dataset.id); // This now uses the prop
+          reloadDatasetFiles(dataset.id);
         }}
         datasetId={dataset.id}
       />

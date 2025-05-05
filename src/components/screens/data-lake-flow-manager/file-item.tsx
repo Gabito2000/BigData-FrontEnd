@@ -8,7 +8,7 @@ interface DatasetComponentProps {
   dataset: DatasetWithIcon;
   onFilter: (text: string) => void;
   onToggleFiles: (datasetId: string) => void;
-  onAddFile?: () => void;
+  onAddFile?: (datasetId: string) => void;
   onSendDatasetToSandbox?: (datasetId: string) => void;
   onSendFileToSandbox?: (fileId: string) => void;
 }
@@ -66,7 +66,7 @@ export function DatasetComponent({
                   className="h-6 w-6"
                   onClick={(e) => {
                     e.stopPropagation();
-                    onAddFile();
+                    onAddFile(dataset.id);
                   }}
                 >
                   <Plus className="h-4 w-4" />
@@ -93,11 +93,11 @@ export function DatasetComponent({
                 <FileIcon className="text-blue-400 mr-2" />
                 <div className="flex flex-col flex-1">
                   <a
-                    href={`/archivos?file=${encodeURIComponent(file.filePath || "")}`}
+                    href={`/archivos?file=${encodeURIComponent(file.filePath || file.id)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="font-semibold text-blue-600 hover:underline"
-                    onClick={e => e.stopPropagation()}
+                    className="font-semibold text-blue-600 hover:underline truncate"
+                    title={file.filePath || file.id}
                   >
                     {file.filePath || file.id}
                   </a>
@@ -113,6 +113,18 @@ export function DatasetComponent({
                       Send to Sandbox
                     </Button>
                   )}
+                  {/* Add magnifying glass for filtering by file */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFilter(file.filePath || file.id);
+                    }}
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             ))}

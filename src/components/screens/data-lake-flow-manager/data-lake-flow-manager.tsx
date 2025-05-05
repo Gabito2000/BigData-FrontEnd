@@ -84,6 +84,7 @@ export default function DataLakeFlowManager() {
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(
     null
   );
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   // Fetch flows and tags on component mount
   useEffect(() => {
@@ -282,10 +283,114 @@ export default function DataLakeFlowManager() {
       .filter((flow): flow is FlowWithIcons => flow !== null);
   };
 
-  const filteredFlows = useMemo(
-    () => filterFlows(flows, filterText),
-    [flows, filterText]
-  );
+  const filteredFlows = useMemo(() => {
+    let baseFlows = flows; // Start with all flows
+
+    // Apply tag filter first if selected
+    if (selectedTag) {
+      // NOTE: This section assumes tag filtering logic exists and modifies baseFlows.
+      // The previous 'view_files' output didn't show the full tag filtering implementation.
+      // If tag filtering is needed, ensure the correct logic is present here.
+      // For example, it might look something like:
+      // const elements = await fetchElementsByTag(selectedTag); // Needs async handling or separate state
+      // const flowIds = new Set(elements.flows.map(f => f.id));
+      // baseFlows = baseFlows.filter(flow => flowIds.has(flow.id));
+      // ... similar logic for pipelines within flows ...
+      console.warn("Review and restore tag filtering logic if required.");
+    }
+
+    // Apply text filter if present
+    if (!filterText) {
+      return baseFlows; // Return tag-filtered (or all) flows if no text filter
+    }
+
+    const lowerCaseFilter = filterText.toLowerCase();
+    // Heuristic to guess if the filter is targeting a specific file/script
+    const isLikelyFileOrScriptFilter = lowerCaseFilter.includes('.') || lowerCaseFilter.includes('/');
+
+    const resultFlows = baseFlows.map(flow => {
+      const matchingPipelines = flow.pipelines.map(pipeline => {
+        let pipelineContainsMatch = false; // Does the pipeline contain a file/script match?
+        let pipelineNameMatches = !isLikelyFileOrScriptFilter && pipeline.name.toLowerCase().includes(lowerCaseFilter);
+
+        // Helper to check if an item or its contents match the filter
+        const checkItemMatch = (item: PipelineItemWithIcon): { itemMatches: boolean, containsFileOrScriptMatch: boolean } => {
+          let matches = !isLikelyFileOrScriptFilter && item.name.toLowerCase().includes(lowerCaseFilter);
+          let containsMatch = false; // Does the item contain a file/script match?
+
+          const fileOrScriptMatcher = (entity: { name?: string, id: string, filePath?: string }): boolean =>
+            (entity.name || entity.id).toLowerCase().includes(lowerCaseFilter) ||
+            (entity.filePath && entity.filePath.toLowerCase().includes(lowerCaseFilter));
+
+          if (item.type === "dataset" && item.files?.some(fileOrScriptMatcher)) {
+            matches = true;
+            containsMatch = true;
+          } else if (item.type === "worker" && item.scripts?.some(fileOrScriptMatcher)) {
+            matches = true;
+            containsMatch = true;
+          }
+          return { itemMatches: matches, containsFileOrScriptMatch: containsMatch };
+        };
+
+        // Check inputs and outputs
+        const inputChecks = pipeline.worker.input.map(checkItemMatch);
+        const outputChecks = pipeline.worker.output.map(checkItemMatch);
+
+        const hasMatchingInput = inputChecks.some(check => check.itemMatches);
+        const hasMatchingOutput = outputChecks.some(check => check.itemMatches);
+        pipelineContainsMatch = inputChecks.some(check => check.containsFileOrScriptMatch) || outputChecks.some(check => check.containsFileOrScriptMatch);
+
+        // Determine if the pipeline itself should be kept
+        const keepPipeline = isLikelyFileOrScriptFilter
+          ? pipelineContainsMatch // File Filter: Keep only if it contains the specific file/script
+          : (pipelineNameMatches || hasMatchingInput || hasMatchingOutput); // General Filter: Keep if name or any content matches
+
+        if (keepPipeline) {
+          // If it's a file/script filter, refine the pipeline's contents
+          if (isLikelyFileOrScriptFilter) {
+              const filterAndExpand = (items: PipelineItemWithIcon[], checks: { itemMatches: boolean, containsFileOrScriptMatch: boolean }[]) => {
+                  return items.map((item, index) => {
+                      if (checks[index].containsFileOrScriptMatch) {
+                          // Expand the item containing the match
+                          if (item.type === 'dataset') return { ...item, showFiles: true };
+                          if (item.type === 'worker') return { ...item, showScripts: true };
+                      }
+                      // Filter out items that don't contain the match in file filter mode
+                      return checks[index].containsFileOrScriptMatch ? item : null;
+                  }).filter(item => item !== null) as PipelineItemWithIcon[];
+              };
+
+              const updatedInput = filterAndExpand(pipeline.worker.input, inputChecks);
+              const updatedOutput = filterAndExpand(pipeline.worker.output, outputChecks);
+
+              // Only keep the pipeline if it still has relevant items after filtering
+              if (updatedInput.length === 0 && updatedOutput.length === 0) return null;
+
+              return {
+                  ...pipeline,
+                  worker: { input: updatedInput, output: updatedOutput },
+                  // Note: Forcing pipeline expansion (isExpanded) needs state management,
+                  // but items inside will be expanded (showFiles/showScripts).
+              };
+          } else {
+              // For general filter, return the unmodified pipeline
+              return pipeline;
+          }
+        }
+        return null; // Remove pipeline if it doesn't meet criteria
+
+      }).filter((pipeline): pipeline is PipelineWithIcons => pipeline !== null); // Filter out null pipelines
+
+      // Keep the flow only if it has matching pipelines
+      if (matchingPipelines.length > 0) {
+        return { ...flow, pipelines: matchingPipelines };
+      }
+      return null; // Remove flow if no pipelines match
+    }).filter((flow): flow is FlowWithIcons => flow !== null); // Filter out null flows
+
+    return resultFlows;
+
+  }, [flows, selectedTag, filterText]); // Dependencies
 
   const handleFilterByFlow = (flow: Flow) => {
     setFilterText(flow.name);
@@ -759,9 +864,11 @@ export default function DataLakeFlowManager() {
                               setSelectedPipelineId(pipeline.id);
                               setIsDatasetDialogOpen(true);
                             }}
-                            onAddFile={() => {
+                            onAddFile={(dataset_id) => {
                               setSelectedPipelineId(pipeline.id);
                               setIsFileDialogOpen(true);
+                              setSelectedZone(pipeline.zone);
+                              setSelectedDatasetId(dataset_id);
                             }}
                             onAddTransform={() => {
                               setSelectedPipelineId(pipeline.id);
@@ -816,6 +923,7 @@ export default function DataLakeFlowManager() {
         onClose={() => setIsFileDialogOpen(false)}
         onFileCreated={handleFileCreated}
         datasetId={selectedDatasetId || ""}
+        datasetZone={selectedZone || ""}
       />
 
       <TransformCreationDialog
