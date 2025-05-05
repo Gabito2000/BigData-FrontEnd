@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, DatabaseIcon, Search, Box } from "lucide-react";
+import { ChevronDown, ChevronRight, DatabaseIcon, Search, Box, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Replace existing DatasetWithIcon import with:
 import type { DatasetWithIcon } from "./types";
@@ -22,63 +22,94 @@ export function DatasetComponent({
   onSendFileToSandbox,
 }: DatasetComponentProps) {
   return (
-    <div className="flex items-center p-2 border rounded hover:bg-gray-50">
-      <DatabaseIcon/>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        onClick={() => onToggleFiles(dataset.id)}
-      >
-        {dataset.showFiles ? (
-          <ChevronDown className="h-4 w-4" />
-        ) : (
-          <ChevronRight className="h-4 w-4" />
-        )}
-      </Button>
-      <div className="ml-2 flex-1">
-        <span className="text-sm font-medium">{dataset.name}</span>
-        <div className="flex items-center gap-1 mt-1">
-          <span className="text-xs text-muted-foreground">
-            {dataset.files?.length || 0} files
-          </span>
+    <div className="flex flex-col w-full">
+      <div className="flex flex-col border rounded shadow bg-white p-2">
+        <div className="flex items-center">
+          <DatabaseIcon/>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => onToggleFiles(dataset.id)}
+          >
+            {dataset.showFiles ? (
+              <ChevronDown className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Button>
+          <div className="ml-2 flex-1">
+            <span className="text-sm font-medium">{dataset.name}</span>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-xs text-muted-foreground">
+                {dataset.files?.length || 0} files
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-1">
+            {onAddFile && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSendDatasetToSandbox && onSendDatasetToSandbox(dataset.id);
+                  }}
+                >
+                  <Box className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAddFile();
+                  }}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                onFilter(dataset.name);
+              }}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-      </div>
-      <div className="flex gap-1">
-        {onAddFile && (
-          <><Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSendDatasetToSandbox && onSendDatasetToSandbox(dataset.id);
-            } }
-          >
-            <Box className="h-4 w-4" />
-          </Button><Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            onClick={(e) => {
-              e.stopPropagation();
-              onAddFile();
-            } }
-          >
-              <Plus className="h-4 w-4" />
-            </Button></>
+        {dataset.showFiles && dataset.files && (
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {dataset.files.map((file) => (
+              <div key={file.id} className="flex items-center p-3 border rounded bg-gray-50">
+                <FileIcon className="text-blue-400 mr-2" />
+                <div className="flex flex-col flex-1">
+                  <span className="font-semibold">{file.filePath || file.id}</span>
+                  <span className="text-xs text-gray-500">{file.fileType}</span>
+                </div>
+                <div className="flex gap-2">
+                  {onSendFileToSandbox && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onSendFileToSandbox(file.id)}
+                    >
+                      Send to Sandbox
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={(e) => {
-            e.stopPropagation();
-            onFilter(dataset.name);
-          }}
-        >
-          <Search className="h-4 w-4" />
-        </Button>
       </div>
     </div>
   );

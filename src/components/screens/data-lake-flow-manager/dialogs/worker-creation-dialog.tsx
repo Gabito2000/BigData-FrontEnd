@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createWorker, associateWorkerWithPipeline, fetchFlows } from "@/lib/api";
+import { createWorker, associateWorkerWithPipeline, fetchFlows, fetchDatasets } from "@/lib/api";
 import { Label } from "@/components/ui/label";
 
 interface WorkerCreationDialogProps {
@@ -13,11 +13,16 @@ interface WorkerCreationDialogProps {
   pipelineId: string;
 }
 
+const ZONE_ORDER = ["Landing", "Raw", "Trusted", "Refined"];
+
 export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelineId }: WorkerCreationDialogProps) {
   const [id, setId] = useState("");
   const [isNewWorker, setIsNewWorker] = useState(true);
   const [existingWorkerId, setExistingWorkerId] = useState("");
   const [availableWorkers, setAvailableWorkers] = useState<{id: string, name: string}[]>([]);
+  const [outputDatasetId, setOutputDatasetId] = useState("");
+  const [availableDatasets, setAvailableDatasets] = useState<{id: string, name: string, zone?: string}[]>([]);
+  const [pipelineZone, setPipelineZone] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,8 +30,12 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
     if (isOpen) {
       fetchFlows().then((flows) => {
         const workers: {id: string, name: string}[] = [];
+        let currentZone: string | null = null;
         flows.forEach(flow => {
           flow.pipelines.forEach(process => {
+            if (process.id === pipelineId) {
+              currentZone = process.zone;
+            }
             if (process.worker && process.worker.input) {
               process.worker.input.forEach(item => {
                 if (item.type === 'worker') {
@@ -37,9 +46,34 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
           });
         });
         setAvailableWorkers(workers);
+        setPipelineZone(currentZone);
+        // Fetch datasets for the next zone
+        if (currentZone) {
+          const nextZoneIndex = ZONE_ORDER.indexOf(currentZone) + 1;
+          const nextZone = ZONE_ORDER[nextZoneIndex] || null;
+          if (nextZone) {
+            fetchDatasets(nextZone).then((datasets) => {
+              console.log("Fetched datasets:", datasets); // Add this line for debugging
+              // Defensive: ensure datasets is an array
+              const safeDatasets = Array.isArray(datasets) ? datasets : [];
+              setAvailableDatasets(
+                safeDatasets
+                  .filter((ds: any) => ds && ds.id)
+                  .map((ds: any) => ({
+                    id: ds.id,
+                    name: ds.name || ds.id,
+                  }))
+              );
+            }).catch(() => {
+              setAvailableDatasets([]);
+            });
+          } else {
+            setAvailableDatasets([]);
+          }
+        }
       });
     }
-  }, [isOpen]);
+  }, [isOpen, pipelineId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,17 +84,18 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
       if (isNewWorker) {
         await createWorker({
           id: id,
-          name: id,
-          process_id: pipelineId
+          pipeline_id: pipelineId,
+          output_dataset_id: outputDatasetId,
         });
       } else {
         // Instead of creating a new worker, create a relationship
-        await associateWorkerWithPipeline(existingWorkerId, pipelineId);
+        await associateWorkerWithPipeline(existingWorkerId, pipelineId, outputDatasetId);
       }
       onWorkerCreated();
       onClose();
       setId("");
       setExistingWorkerId("");
+      setOutputDatasetId("");
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add worker');
     } finally {
@@ -103,6 +138,19 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
                   placeholder="Enter new worker ID"
                   required
                 />
+                <Label htmlFor="dataset">Output Dataset</Label>
+                <Select value={outputDatasetId} onValueChange={setOutputDatasetId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a dataset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDatasets.map((ds) => (
+                      <SelectItem key={ds.id} value={ds.id}>
+                        {ds.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ) : (
               <div className="space-y-2">
@@ -115,6 +163,19 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
                     {availableWorkers.map((worker) => (
                       <SelectItem key={worker.id} value={worker.id}>
                         {worker.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Label htmlFor="dataset">Output Dataset</Label>
+                <Select value={outputDatasetId} onValueChange={setOutputDatasetId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a dataset" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableDatasets.map((ds) => (
+                      <SelectItem key={ds.id} value={ds.id}>
+                        {ds.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -135,7 +196,7 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isLoading || (!isNewWorker && !existingWorkerId)}>
+            <Button type="submit" disabled={isLoading || (!isNewWorker && !existingWorkerId) || (isNewWorker && !outputDatasetId)}>
               {isLoading ? "Adding..." : "Add Worker"}
             </Button>
           </DialogFooter>

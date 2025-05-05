@@ -187,7 +187,8 @@ export async function createPipeline(processData: { id: string; name: string; fl
   return response.json();
 }
 
-export async function createWorker(workerData: { id: string; name: string; process_id: string }) {
+export async function createWorker(workerData: { id: string; pipeline_id: string, output_dataset_id: string }) {
+  console.log("Creating worker with data:", workerData);
   const response = await fetch(`${API_BASE_URL}/api/workers`, {
     method: 'POST',
     headers: {
@@ -204,7 +205,7 @@ export async function createWorker(workerData: { id: string; name: string; proce
 export async function createDataset(datasetData: { 
   id: string; 
   name: string; 
-  process_id: string; 
+  pipeline_id: string; 
   sourceUrl?: string;
   is_input: boolean;
 }) {
@@ -270,14 +271,19 @@ export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
   }
 }
 
-export async function associateWorkerWithPipeline(workerId: string, processId: string) {
+export async function associateWorkerWithPipeline(workerId: string, pipelineId: string, outputDatasetId: string) {
   const response = await fetch(
-    `${API_BASE_URL}/api/asociate_worker?worker_id=${encodeURIComponent(workerId)}&process_id=${encodeURIComponent(processId)}`,
+    `${API_BASE_URL}/api/asociate_worker`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-      }
+      },
+      body: JSON.stringify({
+        worker_id: workerId,
+        pipeline_id: pipelineId,
+        output_dataset_id: outputDatasetId
+      })
     }
   );
   if (!response.ok) {
@@ -289,7 +295,7 @@ export async function associateWorkerWithPipeline(workerId: string, processId: s
 
 export async function associateDatasetWithPipeline(datasetId: string, processId: string, isInput: boolean) {
   const response = await fetch(
-    `${API_BASE_URL}/api/associate_dataset?dataset_id=${encodeURIComponent(datasetId)}&process_id=${encodeURIComponent(processId)}&is_input=${isInput}`,
+    `${API_BASE_URL}/api/associate_dataset?dataset_id=${encodeURIComponent(datasetId)}&pipeline_id=${encodeURIComponent(processId)}&is_input=${isInput}`,
     {
       method: 'POST',
       headers: {
@@ -327,4 +333,13 @@ export async function executePipeline(pipelineId: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to execute pipeline');
   }
+}
+
+export async function fetchDatasets(zone?: string): Promise<{ id: string; name: string; zone?: string }[]> {
+  const response = await fetch(`${API_BASE_URL}/api/datasets`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch datasets');
+  }
+  const datasets = await response.json();
+  return datasets;
 }

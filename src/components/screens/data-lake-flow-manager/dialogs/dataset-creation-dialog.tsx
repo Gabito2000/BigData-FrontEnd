@@ -55,7 +55,7 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, pipel
         await createDataset({
           id,
           name: id,
-          process_id: pipelineId,
+          pipeline_id: pipelineId,
           sourceUrl: sourceUrl || undefined,
           is_input: isInput
         });
