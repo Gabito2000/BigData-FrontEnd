@@ -22,6 +22,7 @@ interface PipelineComponentProps {
   onSendToSandbox: (text: string) => void;
   onExecutePipeline: (pipelineId: string) => void;  // Add this line
   isExecuting?: boolean;
+  onSendToArchive: (elementId: string) => void;
 }
 
 export function PipelineComponent({
@@ -36,8 +37,9 @@ export function PipelineComponent({
   onAddTransform,
   onAddFile,
   onSendToSandbox,
-  onExecutePipeline,  // Add this line
+  onExecutePipeline,
   isExecuting,
+  onSendToArchive, // Add this prop
 }: PipelineComponentProps) {
   return (
     <div className="border rounded-lg overflow-hidden">
@@ -112,6 +114,7 @@ export function PipelineComponent({
                     onFilter={onFilter}
                     onAddFile={() => onAddFile(item.id)}
                     onSendFileToSandbox={onSendToSandbox}
+                    onSendToArchive={onSendToArchive(item.id)}
                   />
                 ) : (
                   <WorkerComponent

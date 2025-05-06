@@ -19,6 +19,7 @@ import {
   fetchScriptsByWorker,
 } from "@/lib/api";
 import { Flow, Pipeline, Dataset, Worker, File } from "@/lib/types";
+import { sendToArchive } from "@/lib/api"; // Import the API function
 
 // Extended types with icon property
 type DatasetWithIcon = Dataset & {
@@ -283,19 +284,11 @@ export default function DataLakeFlowManager() {
       .filter((flow): flow is FlowWithIcons => flow !== null);
   };
 
+  // Filter flows based on selected tag and filter text
   const filteredFlows = useMemo(() => {
     let baseFlows = flows; // Start with all flows
 
-    // Apply tag filter first if selected
     if (selectedTag) {
-      // NOTE: This section assumes tag filtering logic exists and modifies baseFlows.
-      // The previous 'view_files' output didn't show the full tag filtering implementation.
-      // If tag filtering is needed, ensure the correct logic is present here.
-      // For example, it might look something like:
-      // const elements = await fetchElementsByTag(selectedTag); // Needs async handling or separate state
-      // const flowIds = new Set(elements.flows.map(f => f.id));
-      // baseFlows = baseFlows.filter(flow => flowIds.has(flow.id));
-      // ... similar logic for pipelines within flows ...
       console.warn("Review and restore tag filtering logic if required.");
     }
 
@@ -395,11 +388,26 @@ export default function DataLakeFlowManager() {
   const handleFilterByFlow = (flow: Flow) => {
     setFilterText(flow.name);
   };
-
+  
   const handleFilter = (text: string) => {
     setFilterText(text);
   };
-
+  const handleSendToArchive = async (elementId: string) => {
+    try {
+      const response = await sendToArchive(elementId);
+      console.log("Archived successfully:", response);
+      
+      // Update the state to remove the archived element
+      setFlows(prevFlows => 
+        prevFlows.map(flow => ({
+          ...flow,
+          pipelines: flow.pipelines.filter(pipeline => pipeline.id !== elementId)
+        })).filter(flow => flow.pipelines.length > 0)
+      );
+    } catch (error) {
+      console.error("Failed to archive:", error);
+    }
+  };
   const clearFilters = () => {
     setSelectedTag(null);
     setFilterText("");
@@ -825,7 +833,7 @@ export default function DataLakeFlowManager() {
                               variant="ghost"
                               size="sm"
                               className="hover:bg-gray-200"
-                              onClick={() => sendFlowToArchival(flow)}
+                              onClick={() => handleSendToArchive(flow.id)}
                             >
                               <Archive className="h-4 w-4" />
                             </Button>
@@ -846,6 +854,7 @@ export default function DataLakeFlowManager() {
                             }}
                             key={pipeline.id}
                             isExecuting={(pipeline as any)?.isExecuting || false}
+                            onSendToArchive={() => handleSendToArchive}
                             pipeline={pipeline as PipelineWithIcons}
                             isExpanded={selectedPipelineId === pipeline.id}
                             onToggle={() =>

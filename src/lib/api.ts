@@ -350,3 +350,18 @@ export function getFileDownloadUrl(path: string): string {
   const encodedPath = encodeURIComponent(path);
   return `${API_BASE_URL}/api/download?path=${encodedPath}`;
 }
+
+export const sendToArchive = async (elementId: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/send_to_archival/${elementId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to send to archive');
+  }
+  
+  return response.json();
+};

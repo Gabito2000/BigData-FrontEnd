@@ -2,7 +2,7 @@ import { ChevronDown, ChevronRight, DatabaseIcon, Search, Box, File as FileIcon 
 import { Button } from "@/components/ui/button";
 // Replace existing DatasetWithIcon import with:
 import type { DatasetWithIcon } from "./types";
-import { Plus } from "lucide-react";
+import { Plus, Archive } from "lucide-react";
 
 interface DatasetComponentProps {
   dataset: DatasetWithIcon;
@@ -11,6 +11,7 @@ interface DatasetComponentProps {
   onAddFile?: (datasetId: string) => void;
   onSendDatasetToSandbox?: (datasetId: string) => void;
   onSendFileToSandbox?: (fileId: string) => void;
+  onSendToArchive?: (datasetId: string) => void; // Add this prop
 }
 
 export function DatasetComponent({
@@ -20,6 +21,7 @@ export function DatasetComponent({
   onAddFile,
   onSendDatasetToSandbox,
   onSendFileToSandbox,
+  onSendToArchive, // Add this to destructured props
 }: DatasetComponentProps) {
   return (
     <div className="flex flex-col w-full">
@@ -47,6 +49,19 @@ export function DatasetComponent({
             </div>
           </div>
           <div className="flex gap-1">
+            {onSendToArchive && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSendToArchive(dataset.id);
+                }}
+              >
+                <Archive className="h-4 w-4" />
+              </Button>
+            )}
             {onAddFile && (
               <>
                 <Button
