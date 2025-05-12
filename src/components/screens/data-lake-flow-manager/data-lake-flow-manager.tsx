@@ -63,8 +63,7 @@ import { WorkerCreationDialog } from "@/components/screens/data-lake-flow-manage
 import { DatasetCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/dataset-creation-dialog";
 import { FileCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/file-creation-dialog";
 import { TransformCreationDialog } from "@/components/screens/data-lake-flow-manager/dialogs/transform-creation-dialog";
-import { executePipeline } from "@/lib/api"; // Add this import
-import { pipeline } from "stream";
+import { executePipeline } from "@/lib/api"; 
 
 export default function DataLakeFlowManager() {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(
@@ -719,10 +718,8 @@ export default function DataLakeFlowManager() {
         }))
       )
 
-      // Execute pipelines in sequence
       while (pipelinesInZone.length >= 0) {
-        //TODO CHANGE TO REAL CODE NOT A MOCK
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await executePipeline(pipelinesInZone[0].id);
         const pipeline = pipelinesInZone.pop();
         if (!pipeline) break;
         await setFlows((prevFlows) => 
