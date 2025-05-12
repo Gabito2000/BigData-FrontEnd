@@ -348,7 +348,7 @@ export async function fetchDatasets(zone?: string): Promise<{ id: string; name: 
 export function getFileDownloadUrl(path: string): string {
   // Ensure the path is properly encoded for use in a URL query parameter
   const encodedPath = encodeURIComponent(path);
-  return `${API_BASE_URL}/api/download?path=${encodedPath}`;
+  return `${API_BASE_URL}/api/download/${encodedPath}`;
 }
 
 export const sendToArchive = async (elementId: string) => {

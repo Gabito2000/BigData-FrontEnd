@@ -214,7 +214,7 @@ export const WindowsStyleFileViewer: React.FC<WindowsStyleFileViewerProps> = ({
                             onClick={(e) => {
                               e.stopPropagation();
                               // Replace with your actual download URL logic
-                              window.open(`/api/download?path=${encodeURIComponent(item.name)}`, "_blank");
+                              window.open(`/api/download/${encodeURIComponent(item.name)}`, "_blank");
                             }}
                           >
                             Download

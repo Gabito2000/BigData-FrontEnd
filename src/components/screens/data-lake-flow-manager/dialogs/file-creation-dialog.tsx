@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createFile, associateFileToDataset } from "@/lib/api";
 import { fetchAllFiles } from "@/lib/api";
+import { useRef } from "react";
 
 interface FileCreationDialogProps {
   isOpen: boolean;
@@ -29,7 +30,8 @@ export function FileCreationDialog({
   const [isExistingFile, setIsExistingFile] = useState(false);
   const [existingFileId, setExistingFileId] = useState("");
   const [availableFiles, setAvailableFiles] = useState<{id: string, name: string}[]>([]);
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (isOpen) {
       fetchAllFiles().then(files => {
@@ -44,11 +46,32 @@ export function FileCreationDialog({
     setIsExistingFile(!isLandingZone);
   };
 
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      setSelectedFile(e.dataTransfer.files[0]);
+      setId(e.dataTransfer.files[0].name);
+      setFilePath(e.dataTransfer.files[0].name);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+      setId(e.target.files[0].name);
+      setFilePath(e.target.files[0].name);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-  
+
     try {
       let result;
       if (isExistingFile) {
@@ -57,21 +80,34 @@ export function FileCreationDialog({
         if (datasetZone.toLowerCase() !== 'landing') {
           throw new Error('New files can only be created in Landing zone');
         }
-        
-        result = await createFile({
-          id,
-          dataset_id: datasetId,
-          fileType: fileType.toLowerCase(),
-          file_path: filePath || undefined,
+        if (!selectedFile) {
+          throw new Error('Please select or drop a file to upload');
+        }
+        // Use FormData for file upload
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("id", id);
+        formData.append("dataset_id", datasetId);
+        formData.append("fileType", fileType.toLowerCase());
+
+        const response = await fetch("http://localhost:8000/api/files/upload", {
+          method: "POST",
+          body: formData,
         });
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Failed to upload file");
+        }
+        result = await response.json();
       }
-      
+
       onFileCreated();
       onClose();
       setId("");
       setFilePath("");
       setFileType("structured");
       setExistingFileId("");
+      setSelectedFile(null);
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to create/associate file");
     } finally {
@@ -135,31 +171,25 @@ export function FileCreationDialog({
               </div>
             ) : (
               <>
-                <div className="space-y-2">
-                  <label htmlFor="id" className="text-sm font-medium">
-                    File ID
-                  </label>
-                  <Input
-                    id="id"
-                    value={id}
-                    onChange={(e) => setId(e.target.value)}
-                    placeholder="Enter file ID"
-                    required
+                <div
+                  className="border-dashed border-2 border-gray-300 rounded p-4 text-center cursor-pointer"
+                  onDrop={handleFileDrop}
+                  onDragOver={handleDragOver}
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{ background: selectedFile ? "#f0f0f0" : undefined }}
+                >
+                  {selectedFile ? (
+                    <span>Selected file: {selectedFile.name}</span>
+                  ) : (
+                    <span>Drag and drop a file here, or click to select</span>
+                  )}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    style={{ display: "none" }}
+                    onChange={handleFileChange}
                   />
                 </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="filePath" className="text-sm font-medium">
-                    File Path
-                  </label>
-                  <Input
-                    id="filePath"
-                    value={filePath}
-                    onChange={(e) => setFilePath(e.target.value)}
-                    placeholder="Enter file path"
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <label htmlFor="fileType" className="text-sm font-medium">
                     File Type
