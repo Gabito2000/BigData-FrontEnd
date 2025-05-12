@@ -314,10 +314,9 @@ export async function associateFileToDataset(fileId: string, datasetId: string) 
 }
 
 export async function executePipeline(pipelineId: string): Promise<void> {
-  const response = await fetch(`/api/pipelines/${pipelineId}/execute`, {
+  const response = await fetch(`${API_BASE_URL}/api/run_pipeline/${pipelineId}`, {
     method: 'POST',
   });
-  
   if (!response.ok) {
     throw new Error('Failed to execute pipeline');
   }
