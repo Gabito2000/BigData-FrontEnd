@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { WorkerWithIcon } from "./types";
 import { Plus } from "lucide-react";
 import { FileCode2 as ScriptIcon } from "lucide-react";
-
+import { TransactionItem } from "./transaction-item";
 interface WorkerComponentProps {
   worker: WorkerWithIcon;
   onFilter: (text: string) => void;
@@ -73,13 +73,11 @@ export function WorkerComponent({
         {worker.showScripts && worker.scripts && (
           <div className="mt-3 grid grid-cols-1 gap-2">
             {worker.scripts.map((script) => (
-              <div key={script.id} className="flex items-center p-3 border rounded bg-gray-50">
-                <ScriptIcon className="text-green-400 mr-2" />
-                <div className="flex flex-col flex-1">
-                  <span className="font-semibold">{script.id}</span>
-                  {/* Add more script details if available */}
-                </div>
-              </div>
+              <TransactionItem
+                key={script.id}
+                script={script}
+                onSearch={onFilter}
+              />
             ))}
           </div>
         )}

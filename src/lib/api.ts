@@ -74,28 +74,12 @@ export const fetchFileSystemData = async (path: string): Promise<FileSystemItem>
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 500))
 
-  // Mock data
-  const mockData: FileSystemItem = {
-    name: path,
-    type: 'folder',
-    modifiedDate: new Date(),
-    children: [
-      {
-        name: 'New Folder',
-        type: 'folder',
-        modifiedDate: new Date(),
-        children: []
-      },
-      {
-        name: 'New File.txt',
-        type: 'file',
-        size: 1024,
-        modifiedDate: new Date()
-      }
-    ]
-  }
+  // Pass the path as a query parameter to the backend
+  const encodedPath = encodeURIComponent(path);
+  const mockData = await fetch(`${API_BASE_URL}/api/filesystem?path=${encodedPath}`).then(res => res.json())
 
   console.log(`Fetched file system data for path: ${path}`, mockData)
+
   return mockData
 }
 
@@ -222,16 +206,20 @@ export async function createDataset(datasetData: {
   return response.json();
 }
 
-export async function createTransformation(transformationData: { id: string; name: string; worker_id: string; file_id: string[] }) {
+export async function createTransformation(transformationData: { id: string; worker_id: string; file_id: string[]; scriptFile: globalThis.File }) {
+  const formData = new FormData();
+  formData.append("id", transformationData.id);
+  formData.append("worker_id", transformationData.worker_id);
+  transformationData.file_id.forEach(fid => formData.append("file_id", fid));
+  formData.append("scriptFile", transformationData.scriptFile);
+
   const response = await fetch(`${API_BASE_URL}/api/transformations`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(transformationData),
+    method: "POST",
+    body: formData,
   });
   if (!response.ok) {
-    throw new Error('Failed to create transformation');
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to create transformation");
   }
   return response.json();
 }
@@ -365,3 +353,11 @@ export const sendToArchive = async (elementId: string) => {
   
   return response.json();
 };
+
+export async function fetchDatasetsForWorkerPipeline(workerId: string): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/api/workers/${workerId}/datasets`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch datasets for worker pipeline');
+  }
+  return response.json();
+}

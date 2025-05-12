@@ -95,7 +95,7 @@ export type ServerInfo = {
 export const initialServersData: ServerInfo[] = [
   {
     name: "Servidor 1",
-    fileSystem: await fetchFileSystemData('root'),
+    fileSystem: await fetchFileSystemData(''),
     url: "http://localhost:3001",
     storage: {
       total: 1000,

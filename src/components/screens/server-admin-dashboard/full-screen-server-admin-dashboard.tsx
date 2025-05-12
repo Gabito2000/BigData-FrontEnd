@@ -192,7 +192,7 @@ export function FullScreenServerAdminDashboardComponent() {
           >
             <WindowsStyleFileViewer
               fileSystem={serversData[selectedServer].fileSystem}
-              onRequestData={handleFileSystemRequest}
+              onRequestData={()=> handleFileSystemRequest("")}
               onFileClick={handleFileClick}
             />
           </div>

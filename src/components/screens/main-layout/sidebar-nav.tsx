@@ -267,8 +267,8 @@ function SidebarContent() {
 
   useEffect(() => {
     const initFileSystem = async () => {
-      const handler = new FileSystemItemHandler(fileStructure, "root");
-      await handler.update("root");
+      const handler = new FileSystemItemHandler(fileStructure, "");
+      await handler.update("");
       setFileSystem(handler);
     };
 
@@ -289,7 +289,7 @@ function SidebarContent() {
   };
 
   const handleFileSelect = (path: string) => {
-    const urlPath = `/files/${encodeURIComponent(path)}`;
+    const urlPath = `/archivos?file=${encodeURIComponent(path)}`;
     navigate(urlPath, {
       state: {
         originalPath: path,

@@ -17,7 +17,7 @@ interface PipelineComponentProps {
   onFilter: (text: string) => void;
   onAddDataset: () => void;
   onAddWorker: () => void;
-  onAddTransform: () => void;
+  onAddTransform: (worker_id: string) => void;
   onAddFile: (datasetId: string) => void;
   onSendToSandbox: (text: string) => void;
   onExecutePipeline: (pipelineId: string) => void;  // Add this line
@@ -122,7 +122,7 @@ export function PipelineComponent({
                     worker={item}
                     onToggleScripts={onToggleScripts}
                     onFilter={onFilter}
-                    onAddTransform={onAddTransform}
+                    onAddTransform={() => onAddTransform(item.id)}
                   />
                 )
               )}

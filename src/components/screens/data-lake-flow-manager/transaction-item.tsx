@@ -1,112 +1,69 @@
 import { Button } from "@/components/ui/button";
-// Update the lucide-react import
-import { ChevronDown, ChevronRight, File as FileIcon, Search, Code } from "lucide-react";
+import { ChevronDown, ChevronRight, File as FileIcon, Search, Code, Box } from "lucide-react";
 import { File, Worker } from "@/lib/types";
-import { Script } from "vm";
 
 type WorkerWithIcon = Worker & { 
     icon: React.ReactNode;
     scripts?: File[];
     showScripts?: boolean;
-  };
+};
 
 interface TransactionItemProps {
   worker: WorkerWithIcon;
   isLoading: boolean;
   onToggleScripts: (workerId: string) => void;
   onSearch: (text: string) => void;
+  onSendScriptToSandbox?: (scriptId: string) => void; // Optional, like file-item
 }
 
-export function TransactionItem({ worker, isLoading, onToggleScripts, onSearch }: TransactionItemProps) {
-  const SearchButton = ({ 
-    size = "icon", 
-    className = "h-4 w-4 p-0 ml-auto", 
-    iconSize = "h-3 w-3",
-    onClick 
-  }: { 
-    text: string; 
-    size?: "default" | "sm" | "lg" | "icon"; 
-    className?: string;
-    iconSize?: string;
-    onClick: (e: React.MouseEvent) => void 
-  }) => {
-    return (
-      <Button
-        variant="ghost"
-        size={size}
-        className={className}
-        onClick={(e) => {
-          e.stopPropagation();
-          onClick(e);
-        }}
-      >
-        <Search className={iconSize} />
-      </Button>
-    );
-  };
+interface TransactionItemProps {
+  script: File;
+  onSearch: (text: string) => void;
+  onSendToSandbox?: (scriptId: string) => void;
+}
 
+export function TransactionItem({
+  script,
+  onSearch,
+  onSendToSandbox,
+}: TransactionItemProps) {
   return (
-    <div key={worker.id} className="flex flex-col w-full">
-      <div className="flex items-center space-x-1 bg-gray-50 px-2 py-1 rounded border border-gray-200">
-        <Code/>
+    <div className="flex items-center p-3 border rounded bg-gray-50">
+      <FileIcon className="text-green-400 mr-2" />
+      <div className="flex flex-col flex-1">
+        <a
+          href={`/archivos?file=${encodeURIComponent(script.filePath || script.id)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-blue-600 hover:underline truncate"
+          title={script.filePath || script.id}
+        >
+          {script.filePath || script.id}
+        </a>
+        <span className="text-xs text-gray-500">{script.fileType}</span>
+      </div>
+      <div className="flex gap-2">
+        {onSendToSandbox && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onSendToSandbox(script.id)}
+          >
+            Send to Sandbox
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
-          className="h-5 w-5 p-0 flex-shrink-0"
-          onClick={() => onToggleScripts(worker.id)}
+          className="h-6 w-6"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSearch(script.filePath || script.id);
+          }}
         >
-          {worker.showScripts ? (
-            <ChevronDown className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
-          )}
+          <Search className="h-4 w-4" />
         </Button>
-        <FileIcon className="h-4 w-4 text-green-500" /> 
-        
-        
-        <span className="text-sm truncate">{worker.name}</span>
-        <SearchButton
-          text={worker.name}
-          size="icon"
-          iconSize="h-3 w-3"
-          className="h-4 w-4 p-0 ml-auto"
-          onClick={() => onSearch(worker.name)}
-        />
       </div>
-      
-      {worker.showScripts && (
-        <div className="ml-5 mt-1 space-y-1">
-          {isLoading ? (
-            <div className="text-xs text-gray-500">Loading scripts...</div>
-          ) : worker.scripts && worker.scripts.length > 0 ? (
-            worker.scripts.map(script => (
-              <div key={script.id} className="flex items-center space-x-1 bg-white px-2 py-0.5 rounded border border-gray-100 text-xs">
-                <FileIcon className="h-3 w-3 text-green-500 flex-shrink-0" />
-                <a
-                  href={`/archivos?file=${encodeURIComponent(script.filePath || script.name || script.id)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="truncate text-blue-600 hover:underline font-semibold"
-                  onClick={e => e.stopPropagation()}
-                >
-                  {script.name || script.id}
-                </a>
-                {script.fileType && (
-                  <span className="text-gray-500 text-xs">({script.fileType})</span>
-                )}
-                <SearchButton 
-                  text={script.name || script.id}
-                  className="h-3 w-3 p-0 ml-auto"
-                  iconSize="h-2 w-2"
-                  onClick={() => onSearch(script.name || script.id)}
-                />
-              </div>
-            ))
-          ) : (
-            <div className="text-xs text-gray-500">No scripts</div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

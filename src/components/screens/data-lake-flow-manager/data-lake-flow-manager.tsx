@@ -92,6 +92,7 @@ export default function DataLakeFlowManager() {
   const [selectedDatasetId, setSelectedDatasetId] = useState<string | null>(
     null
   );
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   // Fetch flows and tags on component mount
@@ -932,9 +933,10 @@ return (
                                 setSelectedZone(pipeline.zone);
                                 setSelectedDatasetId(dataset_id);
                               }}
-                              onAddTransform={() => {
+                              onAddTransform={(worker_id) => {
                                 setSelectedPipelineId(pipeline.id);
                                 setIsTransformDialogOpen(true);
+                                setSelectedWorkerId(worker_id);
                               }}
                               onExecutePipeline={() =>
                                 handleExecutePipeline(flows, flow.id, pipeline.id)
@@ -993,7 +995,7 @@ return (
         isOpen={isTransformDialogOpen}
         onClose={() => setIsTransformDialogOpen(false)}
         onTransformCreated={handleTransformCreated}
-        workerId={selectedPipelineId || ""}
+        workerId={selectedWorkerId || ""}
       />
     </div>
   );
