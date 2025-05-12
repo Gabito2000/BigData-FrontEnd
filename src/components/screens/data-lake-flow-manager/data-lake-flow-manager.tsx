@@ -704,30 +704,31 @@ export default function DataLakeFlowManager() {
         zonesToExecute.includes(p.zone)
       );
 
-      for (const pipeline of pipelinesInZone) {
-        console.log("Executing pipeline:", pipeline.id);
-      }
-
-      await setFlows((prevFlows) => 
-        prevFlows.map((f) => ({
+      await setFlows(prev =>
+        prev.map(f => ({
           ...f,
-          pipelines: f.pipelines.map((p) => ({
+          pipelines: f.pipelines.map(p => ({
             ...p,
-            isExecuting: pipelinesInZone.some(pip => pip.id === p.id)
+            isExecuting: f.id === flowId && zonesToExecute.includes(p.zone)
           }))
         }))
-      )
+      );
 
-      while (pipelinesInZone.length >= 0) {
-        await executePipeline(pipelinesInZone[0].id);
-        const pipeline = pipelinesInZone.pop();
-        if (!pipeline) break;
-        await setFlows((prevFlows) => 
-          prevFlows.map((f) => ({
+      // process them one by one
+      while (pipelinesInZone.length > 0) {
+        // pull the very next pipeline off the front
+        const current = pipelinesInZone.pop()!;
+        console.log("Executing pipeline:", current.id);
+        // execute it
+        await executePipeline(current.id);
+        // after it’s done, mark only the remaining ones as executing
+        setFlows(prev =>
+          prev.map(f => ({
             ...f,
-            pipelines: f.pipelines.map((p) => ({
+            pipelines: f.pipelines.map(p => ({
               ...p,
-              isExecuting: f.id === flowId && p.id !== pipeline.id && pipelinesInZone.some(pip => pip.id === p.id)
+              isExecuting:
+                f.id === flowId && pipelinesInZone.some(rem => rem.id === p.id)
             }))
           }))
         );
