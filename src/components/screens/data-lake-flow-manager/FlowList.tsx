@@ -38,7 +38,7 @@ export const FlowList: React.FC<FlowListProps> = ({
         <div key={flow.id} className="mb-6 last:mb-0">
           <div className="space-y-3 bg-gray-50 rounded-lg border-l-4 border-blue-500">
             <div className="flex items-center justify-between p-3">
-              <h3 className="text-lg font-semibold text-gray-800">{flow.name}</h3>
+              <h3 className="text-lg font-semibold text-gray-800">{flow.name ?? flow.id}</h3>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
