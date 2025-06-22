@@ -18,35 +18,35 @@ import type {
 
 
 function convertBackendPipelineToPipeline(pipeline: BackendPipeline): Pipeline {
+  // Log the backend pipeline for debugging
+  console.log('Backend pipeline received:', pipeline);
   const element = {
     id: pipeline.id,
-    name: pipeline.id, // Using id as name since name is not provided in backend
+    name: pipeline.name || pipeline.id, // Prefer name if available
     zone: pipeline.zone as "Landing" | "Raw" | "Trusted" | "Refined",
     worker: {
       input: [
-        ...pipeline.datasets.filter(d => d.isInput).map(d => ({
+        ...(pipeline.datasets ? pipeline.datasets.filter((d: any) => d.isInput).map((d: any) => ({
           id: d.id,
-          name: d.id, // Using id as name since name is not provided
+          name: d.name || d.id, // Prefer name if available
           type: 'dataset' as const,
           is_input: true
-        })),
-        ...pipeline.workers
-          .filter(w => w.id !== null)
-          .map(w => ({
-            id: w.id as string,
-            name: w.id as string, // Using id as name since name is not provided
-            type: 'worker' as const
-          }))
+        })) : []),
+        ...(pipeline.workers ? pipeline.workers.filter((w: any) => w.id !== null).map((w: any) => ({
+          id: w.id as string,
+          name: w.name || w.id as string, // Prefer name if available
+          type: 'worker' as const
+        })) : [])
       ],
-      output: pipeline.datasets.filter(d => d.isOutput).map(d => ({
+      output: pipeline.datasets ? pipeline.datasets.filter((d: any) => d.isOutput).map((d: any) => ({
         id: d.id,
-        name: d.id, // Using id as name since name is not provided
+        name: d.name || d.id, // Prefer name if available
         type: 'dataset' as const,
         is_input: false
-      }))
+      })) : []
     }
   };
-  console.log("element", element)
+  console.log("Frontend pipeline element:", element)
   return element;
 }
 
@@ -57,11 +57,11 @@ export const fetchFlows = async (): Promise<Flow[]> => {
       throw new Error(`Failed to fetch flows: ${response.statusText}`);
     }
     const flows: BackendFlow[] = await response.json();
-    
-    return flows.map((flow) => ({
+    console.log('Backend flows received:', flows);
+    return flows.map((flow: any) => ({
       id: flow.id,
-      name: flow.id, // Using id as name since name is not provided
-      pipelines: flow.pipelines.map(pipeline => convertBackendPipelineToPipeline(pipeline))
+      name: flow.name || flow.id, // Prefer name if available
+      pipelines: flow.pipelines.map((pipeline: any) => convertBackendPipelineToPipeline(pipeline))
     }));
   } catch (error) {
     console.error('Error fetching flows:', error);
@@ -247,12 +247,17 @@ export async function createFile(fileData: { id: string; dataset_id: string; fil
 
 export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
   try {
-    // Fixed endpoint to use plural 'transformations' instead of singular
     const response = await fetch(`${API_BASE_URL}/api/workers/${workerId}/transformations`);
     if (!response.ok) {
       throw new Error(`Failed to fetch transformations for worker ${workerId}`);
     }
-    return await response.json();
+    const data = await response.json();
+    // If backend returns { transformations: [...] }, extract the array
+    if (data && Array.isArray(data.transformations)) {
+      return data.transformations;
+    }
+    // Fallback for legacy or error cases
+    return Array.isArray(data) ? data : [];
   } catch (error) {
     console.error('Error fetching worker transformations:', error);
     return [];
@@ -360,3 +365,19 @@ export async function fetchDatasetsForWorkerPipeline(workerId: string): Promise<
   }
   return response.json();
 }
+
+export const fetchPipelinesByFlow = async (flowId: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/flows/${flowId}/pipelines`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch pipelines for flow');
+  }
+  return response.json();
+};
+
+export const fetchDatasetsAndWorkersByPipeline = async (pipelineId: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/datasets-workers`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch datasets and workers for pipeline');
+  }
+  return response.json();
+};

@@ -4,9 +4,11 @@ import { PipelineWithIcons } from "@/components/screens/data-lake-flow-manager/t
 import { DatasetComponent } from "@/components/screens/data-lake-flow-manager/file-item";
 import { WorkerComponent } from "@/components/screens/data-lake-flow-manager/WorkerComponent";
 import { ArrowRight } from "lucide-react";
-
-// Add to imports
 import { Loader2 } from "lucide-react";
+import { fetchDatasetsAndWorkersByPipeline, fetchFilesByDataset, fetchScriptsByWorker } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { WorkerCreationDialog } from "./dialogs/worker-creation-dialog";
+import { DatasetCreationDialog } from "./dialogs/dataset-creation-dialog";
 
 interface PipelineComponentProps {
   pipeline: PipelineWithIcons;
@@ -17,10 +19,8 @@ interface PipelineComponentProps {
   onFilter: (text: string) => void;
   onAddDataset: () => void;
   onAddWorker: () => void;
-  onAddTransform: (worker_id: string) => void;
-  onAddFile: (datasetId: string) => void;
   onSendToSandbox: (text: string) => void;
-  onExecutePipeline: (pipelineId: string) => void;  // Add this line
+  onExecutePipeline: (pipelineId: string) => void;
   isExecuting?: boolean;
   onSendToArchive: (elementId: string) => void;
 }
@@ -34,13 +34,60 @@ export function PipelineComponent({
   onToggleScripts,
   onAddDataset,
   onAddWorker,
-  onAddTransform,
-  onAddFile,
   onSendToSandbox,
   onExecutePipeline,
   isExecuting,
-  onSendToArchive, // Add this prop
-}: PipelineComponentProps) {
+  onSendToArchive,
+  onDatasetCreated,
+  onWorkerCreated,
+}: PipelineComponentProps & {
+  onDatasetCreated?: () => void;
+  onWorkerCreated?: () => void;
+}) {
+  const [datasetsWorkers, setDatasetsWorkers] = useState<{
+    datasets: any[];
+    workers: any[];
+  } | null>(null);
+  const [isDatasetDialogOpen, setIsDatasetDialogOpen] = useState(false);
+  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isExpanded && !datasetsWorkers) {
+      const fetchAll = async () => {
+        const base = await fetchDatasetsAndWorkersByPipeline(pipeline.id);
+        // Fetch files/scripts for each dataset/worker
+        const datasets = await Promise.all(
+          base.datasets.map(async (item: any) => {
+            const files = await fetchFilesByDataset(item.id);
+            return { ...item, files };
+          })
+        );
+        const workers = await Promise.all(
+          base.workers.map(async (item: any) => {
+            const scripts = await fetchScriptsByWorker(item.id);
+            return { ...item, scripts };
+          })
+        );
+        setDatasetsWorkers({ datasets, workers });
+      };
+      fetchAll();
+    }
+  }, [isExpanded, pipeline.id]);
+
+  // Handler to toggle showScripts for a worker
+  const handleToggleScripts = (workerId: string) => {
+    setDatasetsWorkers((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        workers: prev.workers.map((w) =>
+          w.id === workerId ? { ...w, showScripts: !w.showScripts } : w
+        ),
+      };
+    });
+  };
+
   return (
     <div className="border rounded-lg overflow-hidden">
       <div className="flex items-center bg-gray-100 px-4 py-2">
@@ -61,7 +108,7 @@ export function PipelineComponent({
             <Search className="h-4 w-4" />
           </Button>
           <Button
-            variant="primary"
+            variant="default"
             size="sm"
             onClick={() => onExecutePipeline(pipeline.id)}
             className="bg-green-600 text-white hover:bg-green-700"
@@ -73,13 +120,13 @@ export function PipelineComponent({
                 Executing...
               </>
             ) : (
-              'Run Pipeline'
+              "Run Pipeline"
             )}
           </Button>
         </div>
       </div>
 
-      {isExpanded && (
+      {isExpanded && datasetsWorkers && (
         <div className="p-4 bg-white">
           <div className="grid grid-cols-[1fr,auto,1fr] gap-4">
             <div className="space-y-2">
@@ -89,7 +136,7 @@ export function PipelineComponent({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onAddDataset}
+                    onClick={() => { setSelectedPipelineId(pipeline.id); setIsDatasetDialogOpen(true); }}
                     className="text-xs text-blue-600 hover:text-blue-700 h-5 px-2 py-0"
                   >
                     + Add Dataset
@@ -97,41 +144,52 @@ export function PipelineComponent({
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={onAddWorker}
+                    onClick={() => { setSelectedPipelineId(pipeline.id); setIsWorkerDialogOpen(true); }}
                     className="text-xs text-blue-600 hover:text-blue-700 h-5 px-2 py-0"
                   >
                     + Add Worker
                   </Button>
                 </div>
               </div>
-              
-              {pipeline.worker.input.map((item) =>
-                item.type === "dataset" ? (
-                  <DatasetComponent
-                    key={item.id}
-                    dataset={item}
-                    onToggleFiles={onToggleFiles}
-                    onFilter={onFilter}
-                    onAddFile={() => onAddFile(item.id)}
-                    onSendFileToSandbox={onSendToSandbox}
-                    onSendToArchive={onSendToArchive(item.id)}
-                  />
-                ) : (
-                  <WorkerComponent
-                    key={item.id}
-                    worker={item}
-                    onToggleScripts={onToggleScripts}
-                    onFilter={onFilter}
-                    onAddTransform={() => onAddTransform(item.id)}
-                  />
-                )
-              )}
+
+              {/* Render both datasets and workers in the input section, always showing names and inner elements */}
+              {pipeline.worker.input.map((item) => {
+                if (item.type === 'dataset') {
+                  const enriched = datasetsWorkers.datasets.find((d) => d.id === item.id);
+                  const merged = { ...(enriched || {}), ...item };
+                  return (
+                    <DatasetComponent
+                      key={merged.id}
+                      dataset={merged}
+                      onToggleFiles={onToggleFiles}
+                      onFilter={onFilter}
+                      onSendFileToSandbox={onSendToSandbox}
+                      onSendToArchive={() => onSendToArchive(merged.id)}
+                    />
+                  );
+                } else if (item.type === 'worker') {
+                  // Find the enriched worker and also check if showScripts is set in the merged object
+                  const enriched = datasetsWorkers.workers.find((w) => w.id === item.id);
+                  // If showScripts is set in enriched, use it; otherwise, fallback to item
+                  const showScripts = enriched && typeof enriched.showScripts !== 'undefined' ? enriched.showScripts : item.showScripts;
+                  const merged = { ...(enriched || {}), ...item, showScripts };
+                  return (
+                    <WorkerComponent
+                      key={merged.id}
+                      worker={merged}
+                      onToggleScripts={handleToggleScripts}
+                      onFilter={onFilter}
+                    />
+                  );
+                }
+                return null;
+              })}
             </div>
-            
+
             <div className="flex items-center justify-center">
               <ArrowRight className="h-6 w-6 text-gray-400" />
             </div>
-            
+
             <div className="space-y-2">
               <h4 className="text-sm font-medium text-purple-600">Outputs</h4>
 
@@ -142,7 +200,6 @@ export function PipelineComponent({
                     dataset={item}
                     onToggleFiles={onToggleFiles}
                     onFilter={onFilter}
-                    onAddFile={() => onAddFile(item.id)}
                     onSendFileToSandbox={onSendToSandbox}
                   />
                 ) : (
@@ -153,6 +210,24 @@ export function PipelineComponent({
           </div>
         </div>
       )}
+      <WorkerCreationDialog
+        isOpen={isWorkerDialogOpen}
+        onClose={() => setIsWorkerDialogOpen(false)}
+        onWorkerCreated={() => {
+          setIsWorkerDialogOpen(false);
+          onWorkerCreated && onWorkerCreated();
+        }}
+        pipelineId={pipeline.id}
+      />
+      <DatasetCreationDialog
+        isOpen={isDatasetDialogOpen}
+        onClose={() => setIsDatasetDialogOpen(false)}
+        onDatasetCreated={() => {
+          setIsDatasetDialogOpen(false);
+          onDatasetCreated && onDatasetCreated();
+        }}
+        pipelineId={pipeline.id}
+      />
     </div>
   );
 }

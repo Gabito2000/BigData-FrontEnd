@@ -5,19 +5,24 @@ import type { WorkerWithIcon } from "./types";
 import { Plus } from "lucide-react";
 import { FileCode2 as ScriptIcon } from "lucide-react";
 import { TransactionItem } from "./transaction-item";
+import { useState } from "react";
+import { TransformCreationDialog } from "./dialogs/transform-creation-dialog";
+
 interface WorkerComponentProps {
   worker: WorkerWithIcon;
   onFilter: (text: string) => void;
   onToggleScripts: (workerId: string) => void;
-  onAddTransform?: () => void;
+  onTransformCreated?: () => void;
 }
 
 export function WorkerComponent({
   worker,
   onToggleScripts,
   onFilter,
-  onAddTransform,
+  onTransformCreated,
 }: WorkerComponentProps) {
+  const [isTransformDialogOpen, setIsTransformDialogOpen] = useState(false);
+
   return (
     <div className="flex flex-col w-full">
       <div className="flex flex-col border rounded shadow bg-white p-2">
@@ -44,19 +49,17 @@ export function WorkerComponent({
             </div>
           </div>
           <div className="flex gap-1">
-            {onAddTransform && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onAddTransform();
-                }}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsTransformDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -70,18 +73,33 @@ export function WorkerComponent({
             </Button>
           </div>
         </div>
-        {worker.showScripts && worker.scripts && (
+        {worker.showScripts && (
           <div className="mt-3 grid grid-cols-1 gap-2">
-            {worker.scripts.map((script) => (
-              <TransactionItem
-                key={script.id}
-                script={script}
-                onSearch={onFilter}
-              />
-            ))}
+            {worker.scripts && worker.scripts.length > 0 ? (
+              worker.scripts.map((script) => (
+                <TransactionItem
+                  key={script.id}
+                  script={script}
+                  onSearch={onFilter}
+                />
+              ))
+            ) : (
+              <div className="text-xs text-gray-400 italic text-center py-2">
+                No transformations found in this worker.
+              </div>
+            )}
           </div>
         )}
       </div>
+      <TransformCreationDialog
+        isOpen={isTransformDialogOpen}
+        onClose={() => setIsTransformDialogOpen(false)}
+        onTransformCreated={() => {
+          setIsTransformDialogOpen(false);
+          onTransformCreated && onTransformCreated();
+        }}
+        workerId={worker.id}
+      />
     </div>
   );
 }
