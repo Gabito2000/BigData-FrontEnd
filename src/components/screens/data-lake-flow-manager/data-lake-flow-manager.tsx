@@ -20,6 +20,7 @@ import { AlertBanner } from "./AlertBanner";
 import { FlowList } from "./FlowList";
 import { FlowFilter } from "@/components/screens/data-lake-flow-manager/FlowFilter";
 import { ZoneContainer } from "@/components/screens/data-lake-flow-manager/ZoneContainer";
+import { Loader2 } from "lucide-react";
 
 // Extended types with icon property
 type AlertState = {
@@ -71,15 +72,20 @@ export default function DataLakeFlowManager() {
     type: "info",
   });
 
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
+    setIsLoading(true);
     fetchFlows().then((flowsData) => {
       setFlows(flowsData.map(flow => ({ ...flow, pipelines: [] })) as FlowWithIcons[]);
+      setIsLoading(false);
     });
   }, []);
 
   useEffect(() => {
     if (selectedTag) {
       const loadTaggedElements = async () => {
+        setIsLoading(true);
         try {
           const elements = await fetchElementsByTag(selectedTag);
           if (elements.flows.length > 0) {
@@ -99,10 +105,13 @@ export default function DataLakeFlowManager() {
           }
         } catch (err) {
           console.error("Error loading tagged elements:", err);
+        } finally {
+          setIsLoading(false);
         }
       };
       loadTaggedElements();
     } else {
+      setIsLoading(true);
       fetchFlows()
         .then((flowsData) => {
           const flowsWithIcons = flowsData.map((flow) => ({
@@ -140,7 +149,8 @@ export default function DataLakeFlowManager() {
         })
         .catch((err) => {
           console.error("Error reloading flows:", err);
-        });
+        })
+        .finally(() => setIsLoading(false));
     }
   }, [selectedTag]);
 
@@ -204,6 +214,43 @@ export default function DataLakeFlowManager() {
     setAlertState({ visible: false, message: "", type: "info" });
   };
 
+  // Add this function to refresh flows globally
+  const refreshFlows = async () => {
+    const flowsData = await fetchFlows();
+    const flowsWithIcons = flowsData.map((flow) => ({
+      ...flow,
+      pipelines: flow.pipelines.map((process) => ({
+        ...process,
+        worker: {
+          input: process.worker.input.map((item) => {
+            if (item.type === "dataset") {
+              return {
+                ...item,
+                icon: <Database className="text-blue-500" />,
+                showFiles: false,
+                type: "dataset",
+              };
+            } else {
+              return {
+                ...item,
+                icon: <Code className="text-green-500" />,
+                showScripts: false,
+                type: "worker",
+              };
+            }
+          }),
+          output: process.worker.output.map((item) => ({
+            ...item,
+            icon: <Database className="text-purple-500" />,
+            showFiles: false,
+            type: "dataset",
+          })),
+        },
+      })),
+    }));
+    setFlows(flowsWithIcons as FlowWithIcons[]);
+  };
+
   // Zone Toggle Button
   const ZoneToggleButton = ({ isVisible, setIsVisible, zoneName }: { isVisible: boolean; setIsVisible: (value: boolean) => void; zoneName: string; }) => {
     const icon = zoneName === "Archival" ? <Archive className="h-4 w-4" /> : <Box className="h-4 w-4" />;
@@ -257,55 +304,63 @@ export default function DataLakeFlowManager() {
             )}
           </div>
         )}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="flex gap-4 mb-6">
-            <ZoneToggleButton isVisible={isArchivalVisible} setIsVisible={setIsArchivalVisible} zoneName="Archival" />
-            <ZoneToggleButton isVisible={isSandboxVisible} setIsVisible={setIsSandboxVisible} zoneName="Sandbox" />
+        {isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+            <span className="ml-2 text-blue-600">Loading zones...</span>
           </div>
-          <div className="flex gap-6">
-            {isArchivalVisible && (
-              <div className="w-1/4 min-w-[250px] flex-shrink-0">
-                <div className="bg-white rounded-lg shadow p-4 h-full">
-                  <ZoneContainer zone="Archival" pipelines={[]} />
-                </div>
-              </div>
-            )}
-            <div className={`w-full`}>
-              {(["Landing", "Raw", "Trusted", "Refined"] as const).map((zone) => {
-                const flowsInZone = filteredFlows
-                  .map((flow) => ({
-                    ...flow,
-                    pipelines: flow.pipelines.filter((p) => p.zone.toLowerCase() === zone.toLowerCase()),
-                  }))
-                  .filter((flow) => flow.pipelines.length > 0);
-                if (flowsInZone.length === 0) return null;
-                return (
-                  <ZoneContainer key={zone} zone={zone} pipelines={flowsInZone.flatMap((f) => f.pipelines)}>
-                    <FlowList
-                      flows={flowsInZone}
-                      selectedPipelineId={selectedPipelineId}
-                      onSendToArchive={handleSendToArchive}
-                      onFilterByFlow={(flow) => setFilterText(flow.name)}
-                      onFilter={setFilterText}
-                      onToggleFiles={() => {}}
-                      onToggleScripts={() => {}}
-                      setSelectedPipelineId={setSelectedPipelineId}
-                      handleExecutePipeline={() => {}}
-                      flowsData={flows}
-                    />
-                  </ZoneContainer>
-                );
-              })}
+        ) : (
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="flex gap-4 mb-6">
+              <ZoneToggleButton isVisible={isArchivalVisible} setIsVisible={setIsArchivalVisible} zoneName="Archival" />
+              <ZoneToggleButton isVisible={isSandboxVisible} setIsVisible={setIsSandboxVisible} zoneName="Sandbox" />
             </div>
-            {isSandboxVisible && (
-              <div className="w-1/4 min-w-[250px] flex-shrink-0">
-                <div className="bg-white rounded-lg shadow p-4 h-full">
-                  <ZoneContainer zone="Sandbox" pipelines={[]} />
+            <div className="flex gap-6">
+              {isArchivalVisible && (
+                <div className="w-1/4 min-w-[250px] flex-shrink-0">
+                  <div className="bg-white rounded-lg shadow p-4 h-full">
+                    <ZoneContainer zone="Archival" pipelines={[]} />
+                  </div>
                 </div>
+              )}
+              <div className={`w-full`}>
+                {(["Landing", "Raw", "Trusted", "Refined"] as const).map((zone) => {
+                  const flowsInZone = filteredFlows
+                    .map((flow) => ({
+                      ...flow,
+                      pipelines: flow.pipelines.filter((p) => p.zone.toLowerCase() === zone.toLowerCase()),
+                    }))
+                    .filter((flow) => flow.pipelines.length > 0);
+                  if (flowsInZone.length === 0) return null;
+                  return (
+                    <ZoneContainer key={zone} zone={zone} pipelines={flowsInZone.flatMap((f) => f.pipelines)}>
+                      <FlowList
+                        flows={flowsInZone}
+                        selectedPipelineId={selectedPipelineId}
+                        onSendToArchive={handleSendToArchive}
+                        onFilterByFlow={(flow) => setFilterText(flow.name)}
+                        onFilter={setFilterText}
+                        onToggleFiles={() => {}}
+                        onToggleScripts={() => {}}
+                        setSelectedPipelineId={setSelectedPipelineId}
+                        handleExecutePipeline={() => {}}
+                        flowsData={flows}
+                        refreshFlows={refreshFlows} // Pass down
+                      />
+                    </ZoneContainer>
+                  );
+                })}
               </div>
-            )}
+              {isSandboxVisible && (
+                <div className="w-1/4 min-w-[250px] flex-shrink-0">
+                  <div className="bg-white rounded-lg shadow p-4 h-full">
+                    <ZoneContainer zone="Sandbox" pipelines={[]} />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

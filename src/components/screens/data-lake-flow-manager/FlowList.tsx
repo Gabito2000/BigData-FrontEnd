@@ -16,6 +16,7 @@ interface FlowListProps {
   setSelectedPipelineId: (id: string | null) => void;
   handleExecutePipeline: (flows: FlowWithIcons[], flowId: string, pipelineId: string) => void;
   flowsData: FlowWithIcons[];
+  refreshFlows: () => void; // Add this prop
 }
 
 export const FlowList: React.FC<FlowListProps> = ({
@@ -28,7 +29,8 @@ export const FlowList: React.FC<FlowListProps> = ({
   onToggleScripts,
   setSelectedPipelineId,
   handleExecutePipeline,
-  flowsData
+  flowsData,
+  refreshFlows
 }) => {
   return (
     <>
@@ -75,6 +77,7 @@ export const FlowList: React.FC<FlowListProps> = ({
                 onExecutePipeline={() =>
                   handleExecutePipeline(flowsData, flow.id, pipeline.id)
                 }
+                refreshFlows={refreshFlows} // Pass down
               />
             ))}
           </div>

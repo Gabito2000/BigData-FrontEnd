@@ -14,6 +14,7 @@ interface DatasetComponentProps {
   onSendDatasetToSandbox?: (datasetId: string) => void;
   onSendFileToSandbox?: (fileId: string) => void;
   onSendToArchive?: (datasetId: string) => void;
+  refreshFlows?: () => void; // Add this prop
 }
 
 export function DatasetComponent({
@@ -24,6 +25,7 @@ export function DatasetComponent({
   onSendDatasetToSandbox,
   onSendFileToSandbox,
   onSendToArchive,
+  refreshFlows,
 }: DatasetComponentProps) {
   const [isFileDialogOpen, setIsFileDialogOpen] = useState(false);
   const [showFiles, setShowFiles] = useState(!!dataset.showFiles);
@@ -160,6 +162,8 @@ export function DatasetComponent({
         onClose={() => setIsFileDialogOpen(false)}
         onFileCreated={() => {
           setIsFileDialogOpen(false);
+          refreshFlows && refreshFlows(); // Call global refresh
+          onToggleFiles(dataset.id); // Force local re-fetch of files
           onFileCreated && onFileCreated();
         }}
         datasetId={dataset.id}

@@ -8,11 +8,11 @@ import { createDataset, fetchFlows, associateDatasetWithPipeline } from "@/lib/a
 interface DatasetCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onDatasetCreated: () => void;
+  onSuccess: () => void; // Renamed from onDatasetCreated
   pipelineId: string;
 }
 
-export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, pipelineId }: DatasetCreationDialogProps) {
+export function DatasetCreationDialog({ isOpen, onClose, onSuccess, pipelineId }: DatasetCreationDialogProps) {
   const [id, setId] = useState("");
   const [isNewDataset, setIsNewDataset] = useState(true);
   const [existingDatasetId, setExistingDatasetId] = useState("");
@@ -60,11 +60,9 @@ export function DatasetCreationDialog({ isOpen, onClose, onDatasetCreated, pipel
           is_input: isInput
         });
       } else {
-        // Here you would add logic to associate existing dataset
         await associateDatasetWithPipeline(existingDatasetId, pipelineId, isInput);
       }
-      
-      onDatasetCreated();
+      onSuccess(); // Only call after backend success
       onClose();
       setId("");
       setSourceUrl("");

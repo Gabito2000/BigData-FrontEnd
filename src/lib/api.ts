@@ -20,30 +20,41 @@ import type {
 function convertBackendPipelineToPipeline(pipeline: BackendPipeline): Pipeline {
   // Log the backend pipeline for debugging
   console.log('Backend pipeline received:', pipeline);
+  // Use the original dataset objects for both input and output, so a dataset can appear in both
+  const inputDatasets = (pipeline.datasets || [])
+    .filter((d: any) => d.isInput)
+    .map((d: any) => ({
+      ...d,
+      id: d.id,
+      name: d.name || d.id,
+      type: 'dataset' as const,
+      isInput: true,
+      isOutput: !!d.isOutput
+    }));
+  const outputDatasets = (pipeline.datasets || [])
+    .filter((d: any) => d.isOutput)
+    .map((d: any) => ({
+      ...d,
+      id: d.id,
+      name: d.name || d.id,
+      type: 'dataset' as const,
+      isInput: !!d.isInput,
+      isOutput: true
+    }));
   const element = {
     id: pipeline.id,
     name: pipeline.name || pipeline.id, // Prefer name if available
     zone: pipeline.zone as "Landing" | "Raw" | "Trusted" | "Refined",
     worker: {
       input: [
-        ...(pipeline.datasets ? pipeline.datasets.filter((d: any) => d.isInput).map((d: any) => ({
-          id: d.id,
-          name: d.name || d.id, // Prefer name if available
-          type: 'dataset' as const,
-          is_input: true
-        })) : []),
+        ...inputDatasets,
         ...(pipeline.workers ? pipeline.workers.filter((w: any) => w.id !== null).map((w: any) => ({
           id: w.id as string,
           name: w.name || w.id as string, // Prefer name if available
           type: 'worker' as const
         })) : [])
       ],
-      output: pipeline.datasets ? pipeline.datasets.filter((d: any) => d.isOutput).map((d: any) => ({
-        id: d.id,
-        name: d.name || d.id, // Prefer name if available
-        type: 'dataset' as const,
-        is_input: false
-      })) : []
+      output: outputDatasets
     }
   };
   console.log("Frontend pipeline element:", element)
@@ -52,17 +63,70 @@ function convertBackendPipelineToPipeline(pipeline: BackendPipeline): Pipeline {
 
 export const fetchFlows = async (): Promise<Flow[]> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/flows`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch flows: ${response.statusText}`);
+    // 1. Fetch all flows (id, name, description)
+    const flowsResponse = await fetch(`${API_BASE_URL}/api/flows`);
+    if (!flowsResponse.ok) {
+      throw new Error(`Failed to fetch flows: ${flowsResponse.statusText}`);
     }
-    const flows: BackendFlow[] = await response.json();
-    console.log('Backend flows received:', flows);
-    return flows.map((flow: any) => ({
-      id: flow.id,
-      name: flow.name || flow.id, // Prefer name if available
-      pipelines: flow.pipelines.map((pipeline: any) => convertBackendPipelineToPipeline(pipeline))
-    }));
+    const flows: BackendFlow[] = await flowsResponse.json();
+
+    // 2. For each flow, fetch its pipelines (direct children)
+    const flowsWithPipelines = await Promise.all(
+      flows.map(async (flow) => {
+        const flowDetailResponse = await fetch(`${API_BASE_URL}/api/flows/${flow.id}`);
+        if (!flowDetailResponse.ok) {
+          throw new Error(`Failed to fetch flow details for ${flow.id}: ${flowDetailResponse.statusText}`);
+        }
+        const flowDetail = await flowDetailResponse.json();
+        const pipelines = flowDetail.pipelines || [];
+
+        // 3. For each pipeline, fetch its datasets and workers (direct children)
+        const pipelinesWithDetails = await Promise.all(
+          pipelines.map(async (pipeline: any) => {
+            const pipelineDetailResponse = await fetch(`${API_BASE_URL}/api/pipelines/${pipeline.id}`);
+            if (!pipelineDetailResponse.ok) {
+              throw new Error(`Failed to fetch pipeline details for ${pipeline.id}: ${pipelineDetailResponse.statusText}`);
+            }
+            const pipelineDetail = await pipelineDetailResponse.json();
+            const datasets = pipelineDetail.datasets || [];
+            const workers = pipelineDetail.workers || [];
+
+            // 4. For each dataset, fetch its files (direct children)
+            const datasetsWithFiles = await Promise.all(
+              datasets.map(async (dataset: any) => {
+                const datasetDetailResponse = await fetch(`${API_BASE_URL}/api/datasets/${dataset.id}`);
+                if (!datasetDetailResponse.ok) {
+                  throw new Error(`Failed to fetch dataset details for ${dataset.id}: ${datasetDetailResponse.statusText}`);
+                }
+                const datasetDetail = await datasetDetailResponse.json();
+                return { ...dataset, files: datasetDetail.files || [] };
+              })
+            );
+
+            // 5. For each worker, fetch its transformations (direct children)
+            const workersWithTransformations = await Promise.all(
+              workers.map(async (worker: any) => {
+                const workerDetailResponse = await fetch(`${API_BASE_URL}/api/workers/${worker.id}`);
+                if (!workerDetailResponse.ok) {
+                  throw new Error(`Failed to fetch worker details for ${worker.id}: ${workerDetailResponse.statusText}`);
+                }
+                const workerDetail = await workerDetailResponse.json();
+                return { ...worker, transformations: workerDetail.transformations || [] };
+              })
+            );
+
+            // Attach datasets and workers to pipeline
+            return { ...pipeline, datasets: datasetsWithFiles, workers: workersWithTransformations };
+          })
+        );
+
+        return {
+          ...flow,
+          pipelines: pipelinesWithDetails.map(convertBackendPipelineToPipeline),
+        };
+      })
+    );
+    return flowsWithPipelines;
   } catch (error) {
     console.error('Error fetching flows:', error);
     throw error;
@@ -111,12 +175,13 @@ export const fetchElementsByTag = async (tagId: string): Promise<TaggedElements>
 
 export async function fetchFilesByDataset(datasetId: string): Promise<File[]> {
   try {
-    // Update the API endpoint to include the base URL
-    const response = await fetch(`${API_BASE_URL}/api/datasets/${datasetId}/files`);
+    // Updated to use the new endpoint that returns the dataset and its files
+    const response = await fetch(`${API_BASE_URL}/api/datasets/${datasetId}`);
     if (!response.ok) {
       throw new Error(`Error fetching files: ${response.statusText}`);
     }
-    return await response.json();
+    const dataset = await response.json();
+    return dataset.files || [];
   } catch (error) {
     console.error('Error fetching files:', error);
     return [];
@@ -247,17 +312,13 @@ export async function createFile(fileData: { id: string; dataset_id: string; fil
 
 export async function fetchScriptsByWorker(workerId: string): Promise<File[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/workers/${workerId}/transformations`);
+    // Updated to use the new endpoint that returns the worker and its transformations
+    const response = await fetch(`${API_BASE_URL}/api/workers/${workerId}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch transformations for worker ${workerId}`);
     }
-    const data = await response.json();
-    // If backend returns { transformations: [...] }, extract the array
-    if (data && Array.isArray(data.transformations)) {
-      return data.transformations;
-    }
-    // Fallback for legacy or error cases
-    return Array.isArray(data) ? data : [];
+    const worker = await response.json();
+    return worker.transformations || [];
   } catch (error) {
     console.error('Error fetching worker transformations:', error);
     return [];

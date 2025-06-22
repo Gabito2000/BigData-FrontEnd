@@ -12,14 +12,14 @@ interface WorkerComponentProps {
   worker: WorkerWithIcon;
   onFilter: (text: string) => void;
   onToggleScripts: (workerId: string) => void;
-  onTransformCreated?: () => void;
+  onSuccess?: () => void; // Renamed from onTransformCreated
 }
 
 export function WorkerComponent({
   worker,
   onToggleScripts,
   onFilter,
-  onTransformCreated,
+  onSuccess,
 }: WorkerComponentProps) {
   const [isTransformDialogOpen, setIsTransformDialogOpen] = useState(false);
 
@@ -94,9 +94,9 @@ export function WorkerComponent({
       <TransformCreationDialog
         isOpen={isTransformDialogOpen}
         onClose={() => setIsTransformDialogOpen(false)}
-        onTransformCreated={() => {
+        onSuccess={() => {
           setIsTransformDialogOpen(false);
-          onTransformCreated && onTransformCreated();
+          onSuccess && onSuccess();
         }}
         workerId={worker.id}
       />

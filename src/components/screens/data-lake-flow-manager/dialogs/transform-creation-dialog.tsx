@@ -23,14 +23,14 @@ import { fetchDatasetsForWorkerPipeline } from "@/lib/api";
 interface TransformCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onTransformCreated: () => void;
+  onSuccess: () => void; // Renamed from onTransformCreated
   workerId: string;
 }
 
 export function TransformCreationDialog({
   isOpen,
   onClose,
-  onTransformCreated,
+  onSuccess,
   workerId,
 }: TransformCreationDialogProps) {
   const [id, setId] = useState("");
@@ -62,7 +62,7 @@ export function TransformCreationDialog({
         scriptFile: selectedFile
       });
 
-      onTransformCreated();
+      onSuccess(); // Only call after backend success
       onClose();
       setSelectedFile(null);
       setId("");

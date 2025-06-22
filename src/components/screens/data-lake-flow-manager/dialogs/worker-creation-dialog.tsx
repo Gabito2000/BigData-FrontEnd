@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label";
 interface WorkerCreationDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onWorkerCreated: () => void;
+  onSuccess: () => void; // Renamed from onWorkerCreated
   pipelineId: string;
 }
 
 const ZONE_ORDER = ["Landing", "Raw", "Trusted", "Refined"];
 
-export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelineId }: WorkerCreationDialogProps) {
+export function WorkerCreationDialog({ isOpen, onClose, onSuccess, pipelineId }: WorkerCreationDialogProps) {
   const [id, setId] = useState("");
   const [isNewWorker, setIsNewWorker] = useState(true);
   const [existingWorkerId, setExistingWorkerId] = useState("");
@@ -88,10 +88,9 @@ export function WorkerCreationDialog({ isOpen, onClose, onWorkerCreated, pipelin
           output_dataset_id: outputDatasetId,
         });
       } else {
-        // Instead of creating a new worker, create a relationship
         await associateWorkerWithPipeline(existingWorkerId, pipelineId, outputDatasetId);
       }
-      onWorkerCreated();
+      onSuccess(); // Only call after backend success
       onClose();
       setId("");
       setExistingWorkerId("");

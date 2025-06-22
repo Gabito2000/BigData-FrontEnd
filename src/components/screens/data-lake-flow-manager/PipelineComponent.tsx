@@ -23,6 +23,7 @@ interface PipelineComponentProps {
   onExecutePipeline: (pipelineId: string) => void;
   isExecuting?: boolean;
   onSendToArchive: (elementId: string) => void;
+  refreshFlows: () => void; // Add this prop
 }
 
 export function PipelineComponent({
@@ -38,8 +39,7 @@ export function PipelineComponent({
   onExecutePipeline,
   isExecuting,
   onSendToArchive,
-  onDatasetCreated,
-  onWorkerCreated,
+  refreshFlows, // Add this prop
 }: PipelineComponentProps & {
   onDatasetCreated?: () => void;
   onWorkerCreated?: () => void;
@@ -52,28 +52,49 @@ export function PipelineComponent({
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [selectedPipelineId, setSelectedPipelineId] = useState<string | null>(null);
 
+  // Function to fetch and update all datasets and workers (with scripts)
+  const fetchAll = async () => {
+    const base = await fetchDatasetsAndWorkersByPipeline(pipeline.id);
+    const datasets = await Promise.all(
+      base.datasets.map(async (item: any) => {
+        const files = await fetchFilesByDataset(item.id);
+        return { ...item, files };
+      })
+    );
+    const workers = await Promise.all(
+      base.workers.map(async (item: any) => {
+        const scripts = await fetchScriptsByWorker(item.id);
+        return { ...item, scripts };
+      })
+    );
+    // Enrich pipeline.worker.input/output with files
+    const enrichWithFiles = (arr: any[]) =>
+      arr.map((item) => {
+        if (item.type === 'dataset') {
+          const found = datasets.find((d) => d.id === item.id);
+          return found ? { ...item, ...found } : item;
+        }
+        return item;
+      });
+    if (base.worker) {
+      base.worker.input = enrichWithFiles(base.worker.input || []);
+      base.worker.output = enrichWithFiles(base.worker.output || []);
+    }
+    setDatasetsWorkers({ datasets, workers });
+  };
+
   useEffect(() => {
     if (isExpanded && !datasetsWorkers) {
-      const fetchAll = async () => {
-        const base = await fetchDatasetsAndWorkersByPipeline(pipeline.id);
-        // Fetch files/scripts for each dataset/worker
-        const datasets = await Promise.all(
-          base.datasets.map(async (item: any) => {
-            const files = await fetchFilesByDataset(item.id);
-            return { ...item, files };
-          })
-        );
-        const workers = await Promise.all(
-          base.workers.map(async (item: any) => {
-            const scripts = await fetchScriptsByWorker(item.id);
-            return { ...item, scripts };
-          })
-        );
-        setDatasetsWorkers({ datasets, workers });
-      };
       fetchAll();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded, pipeline.id]);
+
+  // Handler to refresh after creation
+  const handleRefresh = () => {
+    setDatasetsWorkers(null); // Force re-fetch and re-render
+    fetchAll();
+  };
 
   // Handler to toggle showScripts for a worker
   const handleToggleScripts = (workerId: string) => {
@@ -126,6 +147,12 @@ export function PipelineComponent({
         </div>
       </div>
 
+      {isExpanded && !datasetsWorkers && (
+        <div className="p-4 bg-white flex items-center justify-center min-h-[100px]">
+          <Loader2 className="h-6 w-6 animate-spin mr-2 text-blue-500" />
+          <span className="text-blue-600">Loading pipeline data...</span>
+        </div>
+      )}
       {isExpanded && datasetsWorkers && (
         <div className="p-4 bg-white">
           <div className="grid grid-cols-[1fr,auto,1fr] gap-4">
@@ -165,6 +192,12 @@ export function PipelineComponent({
                       onFilter={onFilter}
                       onSendFileToSandbox={onSendToSandbox}
                       onSendToArchive={() => onSendToArchive(merged.id)}
+                      refreshFlows={refreshFlows}
+                      onFileCreated={async () => {
+                        refreshFlows();
+                        setDatasetsWorkers(null);
+                        await fetchAll(); // Await fetch to ensure state updates and spinner stops
+                      }}
                     />
                   );
                 } else if (item.type === 'worker') {
@@ -179,6 +212,11 @@ export function PipelineComponent({
                       worker={merged}
                       onToggleScripts={handleToggleScripts}
                       onFilter={onFilter}
+                      onSuccess={async () => {
+                        refreshFlows();
+                        setDatasetsWorkers(null);
+                        await fetchAll(); // Await fetch to ensure state updates and spinner stops
+                      }}
                     />
                   );
                 }
@@ -201,6 +239,12 @@ export function PipelineComponent({
                     onToggleFiles={onToggleFiles}
                     onFilter={onFilter}
                     onSendFileToSandbox={onSendToSandbox}
+                    refreshFlows={refreshFlows}
+                    onFileCreated={async () => {
+                      refreshFlows();
+                      setDatasetsWorkers(null);
+                      await fetchAll(); // Await fetch to ensure state updates and spinner stops
+                    }}
                   />
                 ) : (
                   <span> THIS IS AN ERROR </span>
@@ -213,19 +257,13 @@ export function PipelineComponent({
       <WorkerCreationDialog
         isOpen={isWorkerDialogOpen}
         onClose={() => setIsWorkerDialogOpen(false)}
-        onWorkerCreated={() => {
-          setIsWorkerDialogOpen(false);
-          onWorkerCreated && onWorkerCreated();
-        }}
+        onSuccess={refreshFlows} // Use global refresh
         pipelineId={pipeline.id}
       />
       <DatasetCreationDialog
         isOpen={isDatasetDialogOpen}
         onClose={() => setIsDatasetDialogOpen(false)}
-        onDatasetCreated={() => {
-          setIsDatasetDialogOpen(false);
-          onDatasetCreated && onDatasetCreated();
-        }}
+        onSuccess={refreshFlows} // Use global refresh
         pipelineId={pipeline.id}
       />
     </div>
