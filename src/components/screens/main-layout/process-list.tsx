@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Process } from "@/lib/types";
+import PrefectIframe from "./prefect-iframe";
 
 export const ProcessList: React.FC<{ pipelines: Process[] }> = ({
   pipelines,
@@ -35,6 +36,10 @@ export const ProcessList: React.FC<{ pipelines: Process[] }> = ({
           ))}
         </TableBody>
       </Table>
+      <div className="mt-8">
+        <h4 className="text-md font-semibold mb-2">Prefect UI</h4>
+        <PrefectIframe />
+      </div>
     </div>
   );
 };
