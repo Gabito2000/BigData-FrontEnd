@@ -8,7 +8,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Process } from "@/lib/types";
-import PrefectIframe from "./prefect-iframe";
+import { PrefectIframe } from "./prefect-iframe";
 
 export const ProcessList: React.FC<{ pipelines: Process[] }> = ({
   pipelines,

@@ -39,12 +39,12 @@ import {
 // Update these imports
 import DataLakeFlowManagerComponent from "@/components/screens/data-lake-flow-manager/data-lake-flow-manager";
 import { DataLakeExplorerComponent } from "@/components/screens/data-lake-explorer/data-lake-explorer";
-import { DataLakeCuadernos } from "@/components/screens/notebooks/data-lake-cuadernos";
+import { DataLakeCuadernos } from "@/components/screens/metadatos/neo4j";
 import UserPermissions from "@/components/screens/user-permissions/user-permissions";
 import { FullScreenServerAdminDashboardComponent } from "@/components/screens/server-admin-dashboard/full-screen-server-admin-dashboard";
 import { WindowsStyleFileViewer } from "@/components/screens/server-admin-dashboard/windows-style-file-viewer";
 
-
+import { PrefectIframe } from "@/components/screens/main-layout/prefect-iframe";
 // Keep other existing imports
 import { FileSystemItemHandler } from "@/lib/types";
 import { FileViewer } from "@/components/screens/file-viewer/FileViewer";
@@ -85,7 +85,7 @@ const menuItems = [
     icon: List,
     label: "Vista de processs",
     path: "/processs",
-    component: DataLakeExplorerComponent,
+    component: PrefectIframe,
   },
   {
     icon: Activity,
@@ -401,15 +401,15 @@ export function SidebarNav() {
     <Router>
       <div className="flex h-screen bg-background">
         <SidebarContent />
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 p-0 overflow-auto h-screen">
           <Routes>
             {menuItems.map((item) => (
               <Route
-                key={item.path}
-                path={item.path}
-                element={
-                  <PageContent title={item.label} component={item.component} />
-                }
+          key={item.path}
+          path={item.path}
+          element={
+            <PageContent title={item.label} component={item.component} />
+          }
               />
             ))}
           </Routes>
