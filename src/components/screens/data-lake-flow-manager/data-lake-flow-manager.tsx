@@ -13,6 +13,7 @@ import {
 import {
   fetchFlows,
   fetchElementsByTag,
+  executePipeline
 } from "@/lib/api";
 import { Flow, Pipeline, Dataset, Worker, File } from "@/lib/types";
 import { sendToArchive } from "@/lib/api";
@@ -343,7 +344,9 @@ export default function DataLakeFlowManager() {
                         onToggleFiles={() => {}}
                         onToggleScripts={() => {}}
                         setSelectedPipelineId={setSelectedPipelineId}
-                        handleExecutePipeline={() => {}}
+                        handleExecutePipeline={(pipelineId: string) => {
+                          executePipeline(pipelineId)
+                        }}
                         flowsData={flows}
                         refreshFlows={refreshFlows} // Pass down
                       />

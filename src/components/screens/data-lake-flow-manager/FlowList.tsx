@@ -14,7 +14,7 @@ interface FlowListProps {
   onToggleFiles: (datasetId: string) => void;
   onToggleScripts: (workerId: string) => void;
   setSelectedPipelineId: (id: string | null) => void;
-  handleExecutePipeline: (flows: FlowWithIcons[], flowId: string, pipelineId: string) => void;
+  handleExecutePipeline: (pipelineId: string) => void;
   flowsData: FlowWithIcons[];
   refreshFlows: () => void; // Add this prop
 }
@@ -75,7 +75,7 @@ export const FlowList: React.FC<FlowListProps> = ({
                 onAddFile={() => setSelectedPipelineId(pipeline.id)}
                 onAddTransform={() => setSelectedPipelineId(pipeline.id)}
                 onExecutePipeline={() =>
-                  handleExecutePipeline(flowsData, flow.id, pipeline.id)
+                  handleExecutePipeline(pipeline.id)
                 }
                 refreshFlows={refreshFlows} // Pass down
               />
