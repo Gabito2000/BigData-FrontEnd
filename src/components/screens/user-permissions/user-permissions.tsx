@@ -23,7 +23,7 @@ const userTypes = [
   "Data Engineer",
   "Data Scientist",
   "Data Analyst",
-  "Administrador",
+  "Administrator",
   "DQ Expert"
 ]
 
