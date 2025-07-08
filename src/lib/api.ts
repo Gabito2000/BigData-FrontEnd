@@ -1,3 +1,70 @@
+// --- User Permissions API ---
+export type UserType = string;
+export type FlowPrivilege = string;
+export type User = {
+  id: number | string;
+  name: string;
+  email: string;
+  userTypes: UserType[];
+  flowPrivileges: FlowPrivilege[];
+  password?: string; // Optional, only used for creation/edit
+};
+export type FlowApiType = { id?: string; name?: string } | string;
+
+export async function fetchUsers(): Promise<User[]> {
+  // Try both endpoints for compatibility
+  let res = await fetch(`${API_BASE_URL}/api/users`);
+  if (res.status === 404) {
+    res = await fetch(`${API_BASE_URL}/api/get_users`);
+  }
+  if (!res.ok) throw new Error('Error fetching users');
+  return res.json();
+}
+
+// Update user permissions (POST /api/users/:id/permissions or /api/update_user_permissions)
+export async function updateUserPermissions(
+  userId: string | number,
+  userTypes: UserType[],
+  flowPrivileges: FlowPrivilege[],
+  name?: string,
+  email?: string,
+  password?: string
+): Promise<void> {
+  let body: any = { userTypes, flowPrivileges };
+  if (name !== undefined) body.name = name;
+  if (email !== undefined) body.email = email;
+  if (password !== undefined && password !== '') body.password = password;
+  let res = await fetch(`${API_BASE_URL}/api/users/${userId}/permissions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 404) {
+    res = await fetch(`${API_BASE_URL}/api/update_user_permissions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId, ...body }),
+    });
+  }
+  if (!res.ok) throw new Error('Error updating permissions');
+}
+
+export async function addUser(user: Omit<User, 'id'>): Promise<User> {
+  let res = await fetch(`${API_BASE_URL}/api/users`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(user),
+  });
+  if (res.status === 404) {
+    res = await fetch(`${API_BASE_URL}/api/add_user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(user),
+    });
+  }
+  if (!res.ok) throw new Error('Error adding user');
+  return res.json();
+}
 import { FileSystemItem } from './types'
 
 // Base URL for API requests
